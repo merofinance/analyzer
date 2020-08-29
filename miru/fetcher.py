@@ -12,6 +12,7 @@ def fetch_token_events(address: str) -> List[dict]:
         {"event": "Borrow", "returnValues.borrower": address},
         {"event": "RepayBorrow", "returnValues.borrower": address},
         {"event": "LiquidateBorrow", "returnValues.borrower": address},
+        {"event": "LiquidateBorrow", "returnValues.liquidator": address},
     ]}).sort([
         ("blockNumber", pymongo.ASCENDING),
         ("transactionIndex", pymongo.ASCENDING),

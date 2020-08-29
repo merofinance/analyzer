@@ -1,0 +1,5 @@
+{"event": "Mint", "address": "0x1A3B", "returnValues": {"minter": "0x1234", "mintAmount": "100", "mintTokens": "110"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 2}
+{"event": "Borrow", "address": "0xA123", "returnValues": {"borrower": "0x1234", "borrowAmount": "80", "accountBorrows": "80", "totalBorrows": "200"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 3}
+{"event": "RepayBorrow", "address": "0xA123", "returnValues": {"payer": "0xabcd", "borrower": "0x1234", "repayAmount": "20", "accountBorrows": "60", "totalBorrows": "180"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 4}
+{"event": "Redeem", "address": "0x1A3B", "returnValues": {"redeemer": "0x1234", "redeemAmount": "40", "redeemTokens": "45"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 5}
+{"event": "LiquidateBorrow", "address": "0xA123", "returnValues": {"liquidator": "0xAB31", "borrower": "0x1234", "repayAmount": "60", "cTokenCollateral": "0x1A3B", "seizeTokens": "55"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 6}
