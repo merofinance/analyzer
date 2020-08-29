@@ -5,7 +5,7 @@ import pytest
 
 
 from miru import settings
-from miru.entities import UserMarket
+from miru.entities import Market, Balances, Markets
 
 
 FIXTURES_PATH = path.join(settings.PROJECT_ROOT, "tests", "fixtures")
@@ -19,7 +19,10 @@ def compound_redeem_event():
 
 @pytest.fixture
 def markets():
-    return [UserMarket("0xa234", 1, 2), UserMarket("0xb345", 2, 5)]
+    return Markets(
+        [Market("0xa234", balances=Balances(1, 2)),
+         Market("0x1A3B"),
+         Market("0xA123")])
 
 
 @pytest.fixture

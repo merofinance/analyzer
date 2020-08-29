@@ -1,5 +1,5 @@
 from miru.event_processor import Processor
-from miru.entities import UserMarkets, State
+from miru.entities import State
 from miru.event_processor import process_event
 
 
@@ -8,15 +8,14 @@ PROTOCOL_NAME = "dummy"
 
 @Processor.register(PROTOCOL_NAME)
 class DummyProcessor(Processor):
-    def update_markets(self, state: State, event: dict) -> UserMarkets:
-        market = state.markets.find_by_address("0x1234")
-        market.total_borrowed += 5
-        return state.markets.replace_or_add_market(market)
+    def process_event(self, state, event):
+        market = state.markets.find_by_address("0xa234")
+        market.balances.total_borrowed = 777
 
 
-def test_process_event(compound_redeem_event):
-    state = State.empty(PROTOCOL_NAME, "0x00")
-    new_state = process_event(PROTOCOL_NAME, state, compound_redeem_event)
-    assert len(new_state.markets) == 1
-    market = new_state.markets.find_by_address("0x1234")
-    assert market.total_borrowed == 5
+def test_process_event(markets, compound_redeem_event):
+    state = State(PROTOCOL_NAME, markets=markets)
+    process_event(PROTOCOL_NAME, state, compound_redeem_event)
+    assert len(state.markets) == len(markets)
+    market = state.markets.find_by_address("0xa234")
+    assert market.balances.total_borrowed == 777
