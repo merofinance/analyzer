@@ -1,6 +1,7 @@
 from typing import List, Dict
 from collections import defaultdict
 from dataclasses import dataclass
+from decimal import Decimal
 
 
 @dataclass
@@ -30,8 +31,11 @@ class Market:
     address: str
     interest_rate_model: str = None
     balances: Balances = None
-    collateral_factor: int = 0
+    reserve_factor: Decimal = Decimal("0")
+    collateral_factor: Decimal = Decimal("0")
     users: Dict[str, Balances] = None
+    is_listed: bool = False
+    comptroller_address: str = None
 
     def __post_init__(self):
         self.address = self.address.lower()
