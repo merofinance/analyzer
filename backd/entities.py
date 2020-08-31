@@ -26,6 +26,16 @@ class Balances:
     token_balance: int = 0
 
 
+@dataclass
+class MarketUser:
+    balances: Balances = None
+    entered: bool = False
+
+    def __post_init__(self):
+        if self.balances is None:
+            self.balances = Balances()
+
+
 @dataclass(eq=False, repr=False)
 class Market:
     address: str
@@ -33,16 +43,18 @@ class Market:
     balances: Balances = None
     reserve_factor: Decimal = Decimal("0")
     collateral_factor: Decimal = Decimal("0")
-    users: Dict[str, Balances] = None
-    is_listed: bool = False
+    close_factor: Decimal = Decimal("0")
+    users: Dict[str, MarketUser] = None
+    listed: bool = False
     comptroller_address: str = None
+    reserves: int = 0
 
     def __post_init__(self):
         self.address = self.address.lower()
         if self.balances is None:
             self.balances = Balances()
         if self.users is None:
-            self.users = defaultdict(Balances)
+            self.users = defaultdict(MarketUser)
 
     def __eq__(self, other):
         return self.address == other.address

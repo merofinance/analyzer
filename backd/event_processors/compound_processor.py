@@ -1,14 +1,20 @@
+"""This module handles compound events
+"""
+
 # pylint: disable=no-self-use
 
 from decimal import Decimal
 
 import stringcase
 
+from .. import constants
+from .. import normalizer
 from ..event_processor import Processor
 from ..entities import State, Market
 from ..logger import logger
-from .. import normalizer
 
+
+FACTORS_DIVIDOR = Decimal(10) ** constants.COMPOUND_FACTORS_DECIMALS
 
 
 @Processor.register("compound")
@@ -40,17 +46,37 @@ class CompoundProcessor(Processor):
 
     def process_new_reserve_factor(self, state: State, market_address: str, event_values: dict):
         market = state.markets.find_by_address(market_address)
-        market.reserve_factor = int(event_values["newReserveFactorMantissa"]) / Decimal(1e18)
+        factor = int(event_values["newReserveFactorMantissa"]) / FACTORS_DIVIDOR
+        assert 0 <= factor <= 1, "close factor must be between 0 and 1"
+        market.reserve_factor = factor
+
+    def process_new_close_factor(self, state: State, market_address: str, event_values: dict):
+        market = state.markets.find_by_address(market_address)
+        factor = int(event_values["newCloseFactorMantissa"]) / FACTORS_DIVIDOR
+        assert 0 <= factor <= 1, "close factor must be between 0 and 1"
+        market.close_factor = factor
 
     def process_new_collateral_factor(self, state: State, _market_address: str, event_values: dict):
         market = state.markets.find_by_address(event_values["cToken"])
-        market.collateral_factor = int(event_values["newCollateralFactorMantissa"]) / Decimal(1e18)
+        market.collateral_factor = int(event_values["newCollateralFactorMantissa"]) / FACTORS_DIVIDOR
+
+    def process_market_listed(self, state: State, _market_address: str, event_values: dict):
+        market = state.markets.find_by_address(event_values["cToken"])
+        market.listed = True
+
+    def process_market_entered(self, state: State, _market_address: str, event_values: dict):
+        market = state.markets.find_by_address(event_values["cToken"])
+        market.users[event_values["account"]].entered = True
+
+    def process_market_exited(self, state: State, _market_address: str, event_values: dict):
+        market = state.markets.find_by_address(event_values["cToken"])
+        market.users[event_values["account"]].entered = False
 
     def process_mint(self, state: State, market_address: str, event_values: dict):
         market = state.markets.find_by_address(market_address)
         mint_amount = int(event_values["mintAmount"])
         market.balances.total_supplied += mint_amount
-        market.users[event_values["minter"]].total_supplied += mint_amount
+        market.users[event_values["minter"]].balances.total_supplied += mint_amount
 
         market.balances.token_balance += int(event_values["mintTokens"])
 
@@ -58,7 +84,7 @@ class CompoundProcessor(Processor):
         market = state.markets.find_by_address(market_address)
         redeem_amount = int(event_values["redeemAmount"])
         redeem_tokens = int(event_values["redeemTokens"])
-        user_balances = market.users[event_values["redeemer"]]
+        user_balances = market.users[event_values["redeemer"]].balances
 
         assert market.balances.total_supplied >= redeem_amount, "supply can never be negative"
         assert market.balances.token_balance >= redeem_tokens, "token balance can never be negative"
@@ -73,19 +99,20 @@ class CompoundProcessor(Processor):
         amount = int(event_values["amount"])
 
         from_ = event_values["from"]
+        from_balances = market.users[from_].balances
         if from_ != market_address:
-            assert market.users[from_].token_balance >= amount, "token balance can never be negative"
-            market.users[from_].token_balance -= amount
+            assert from_balances.token_balance >= amount, "token balance can never be negative"
+            from_balances.token_balance -= amount
 
         to = event_values["to"]
         if to != market_address:
-            market.users[to].token_balance += amount
+            market.users[to].balances.token_balance += amount
 
     def process_borrow(self, state: State, market_address: str, event_values: dict):
         market = state.markets.find_by_address(market_address)
         market.balances.total_borrowed += int(event_values["borrowAmount"])
         borrower = event_values["borrower"]
-        market.users[borrower].total_borrowed += int(event_values["borrowAmount"])
+        market.users[borrower].balances.total_borrowed += int(event_values["borrowAmount"])
 
     def process_repay_borrow(self, state: State, market_address: str, event_values: dict):
         self._execute_repay(state, market_address, event_values["borrower"],
@@ -95,9 +122,18 @@ class CompoundProcessor(Processor):
         self._execute_repay(state, market_address, event_values["borrower"],
                             int(event_values["repayAmount"]))
 
+    def process_reserves_added(self, state: State, market_address: str, event_values: dict):
+        market = state.markets.find_by_address(market_address)
+        market.reserves += int(event_values["addAmount"])
+
+    def process_reserves_reduced(self, state: State, market_address: str, event_values: dict):
+        market = state.markets.find_by_address(market_address)
+        assert market.reserves >= int(event_values["reduceAmount"]), "reserves can never be negative"
+        market.reserves -= int(event_values["reduceAmount"])
+
     def _execute_repay(self, state: State, market_address: str, borrower: str, amount: int):
         market = state.markets.find_by_address(market_address)
-        user_balances = market.users[borrower]
+        user_balances = market.users[borrower].balances
         assert market.balances.total_borrowed >= amount, "borrow can never be negative"
         assert user_balances.total_borrowed >= amount, "borrow can never be negative"
 
