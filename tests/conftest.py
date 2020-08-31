@@ -4,8 +4,8 @@ import json
 import pytest
 
 
-from miru import settings
-from miru.entities import Market, Balances, Markets
+from backd import settings
+from backd.entities import Market, Balances, Markets
 
 
 FIXTURES_PATH = path.join(settings.PROJECT_ROOT, "tests", "fixtures")

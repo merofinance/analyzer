@@ -2,8 +2,8 @@
 
 import pytest
 
-from miru.event_processors import CompoundProcessor
-from miru.entities import State
+from backd.event_processors import CompoundProcessor
+from backd.entities import State
 
 
 MAIN_USER = "0x1234a"

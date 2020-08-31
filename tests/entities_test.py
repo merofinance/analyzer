@@ -1,6 +1,6 @@
 import pytest
 
-from miru.entities import PointInTime, Market, Markets
+from backd.entities import PointInTime, Market, Markets
 
 
 def test_point_in_time_from_event(compound_redeem_event):

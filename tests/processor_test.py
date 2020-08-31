@@ -1,6 +1,6 @@
-from miru.event_processor import Processor
-from miru.entities import State
-from miru.event_processor import process_event
+from backd.event_processor import Processor
+from backd.entities import State
+from backd.event_processor import process_event
 
 
 PROTOCOL_NAME = "dummy"

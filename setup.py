@@ -2,8 +2,8 @@ from setuptools import setup
 
 
 setup(
-    name="miru",
-    packages=["miru"],
+    name="backd",
+    packages=["backd"],
     install_requires=[
         "pymongo",
         "stringcase",
