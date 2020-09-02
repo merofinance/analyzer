@@ -3,24 +3,32 @@
 
 # pylint: disable=no-self-use
 
+from typing import List
 from decimal import Decimal
 
 import stringcase
 
-from .. import constants
-from .. import normalizer
-from ..event_processor import Processor
-from ..entities import State, Market
-from ..logger import logger
+from ... import constants
+from ... import normalizer
+from ...event_processor import Processor
+from ...entities import State, Market
+from ...logger import logger
+from ...hook import Hooks
+from .hooks import DSRHook
+from ...tokens.dai import utils as dai_utils
 
 
-FACTORS_DIVIDOR = Decimal(10) ** constants.COMPOUND_FACTORS_DECIMALS
+FACTORS_DIVISOR = Decimal(10) ** constants.COMPOUND_FACTORS_DECIMALS
 
 
 @Processor.register("compound")
 class CompoundProcessor(Processor):
-    def process_event(self, state, event):
-        super().process_event(state, event)
+    def __init__(self, dsr_rates: List[dict]):
+        dsr_hook = DSRHook(dsr_rates)
+        hooks = Hooks(prehooks=[dsr_hook.run])
+        super().__init__(hooks=hooks)
+
+    def _process_event(self, state, event):
         event = normalizer.normalize_event(event)
         event_name = stringcase.snakecase(event["event"])
         func = getattr(self, f"process_{event_name}", None)
@@ -46,19 +54,19 @@ class CompoundProcessor(Processor):
 
     def process_new_reserve_factor(self, state: State, market_address: str, event_values: dict):
         market = state.markets.find_by_address(market_address)
-        factor = int(event_values["newReserveFactorMantissa"]) / FACTORS_DIVIDOR
+        factor = int(event_values["newReserveFactorMantissa"]) / FACTORS_DIVISOR
         assert 0 <= factor <= 1, "close factor must be between 0 and 1"
         market.reserve_factor = factor
 
     def process_new_close_factor(self, state: State, market_address: str, event_values: dict):
         market = state.markets.find_by_address(market_address)
-        factor = int(event_values["newCloseFactorMantissa"]) / FACTORS_DIVIDOR
+        factor = int(event_values["newCloseFactorMantissa"]) / FACTORS_DIVISOR
         assert 0 <= factor <= 1, "close factor must be between 0 and 1"
         market.close_factor = factor
 
     def process_new_collateral_factor(self, state: State, _market_address: str, event_values: dict):
         market = state.markets.find_by_address(event_values["cToken"])
-        market.collateral_factor = int(event_values["newCollateralFactorMantissa"]) / FACTORS_DIVIDOR
+        market.collateral_factor = int(event_values["newCollateralFactorMantissa"]) / FACTORS_DIVISOR
 
     def process_market_listed(self, state: State, _market_address: str, event_values: dict):
         market = state.markets.find_by_address(event_values["cToken"])
@@ -139,3 +147,8 @@ class CompoundProcessor(Processor):
 
         market.balances.total_borrowed -= amount
         user_balances.total_borrowed -= amount
+
+    @classmethod
+    def create(cls):
+        dsr_rates = dai_utils.fetch_dsr_rates()
+        return cls(dsr_rates=dsr_rates)

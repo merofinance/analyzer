@@ -48,12 +48,3 @@ class BaseFactory:
         if name not in cls._entities:
             raise ValueError("{0} not registered".format(name))
         return cls._entities[name]
-
-    @classmethod
-    def create(cls, name: str, *args, **kwargs):
-        """creates an entity
-
-        :param name: name of the entity
-        :return: the entity instance
-        """
-        return cls.get(name)(*args, **kwargs)

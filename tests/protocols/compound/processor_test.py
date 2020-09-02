@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pytest
 
-from backd.event_processors import CompoundProcessor
+from backd.protocols.compound.processor import CompoundProcessor
 from backd.entities import State, PointInTime
 
 
@@ -15,7 +15,7 @@ BORROW_MARKET = "0xA123"
 
 @pytest.fixture
 def processor():
-    return CompoundProcessor()
+    return CompoundProcessor(dsr_rates=[])
 
 
 @pytest.fixture

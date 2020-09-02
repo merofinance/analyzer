@@ -7,6 +7,7 @@ setup(
     install_requires=[
         "pymongo",
         "stringcase",
+        "smart-open",
     ],
     extras_require={
         "dev": [
