@@ -9,6 +9,7 @@ db = client.get_database()
 
 def create_indices():
     db.events.create_index("event")
+    db.events.create_index("address")
 
     db.events.create_index([
         ("blockNumber", pymongo.ASCENDING),
