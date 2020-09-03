@@ -34,37 +34,45 @@ class InterestRate(ABC, BaseFactory):
         """
 
 
-@InterestRate.register("0x6bc8fe27d0c7207733656595e73c0d5cf7afae36")
-class USDTRateModel(InterestRate):
+@InterestRate.register("0x5562024784cc914069d67d89a28e3201bf7b57e7")
+class JumpRateModel(InterestRate):
     def __init__(self):
         self.base_rate_per_block = 9512937595
         self.blocks_per_year = 2102400
         self.kink = 900000000000000000
-        self.jump_multiplier_per_block = 951293759512
-        self.multiplier_per_block = 95129375951
+        self.jump = 40
+        self.multiplier_per_block = 10569930661
 
     def get_borrow_rate(self, cash: int, borrows: int, reserves: int) -> int:
         utilization_rate = self.get_utilization_rate(cash, borrows, reserves)
         if utilization_rate <= self.kink:
-            return utilization_rate * self.multiplier_per_block // 1e18 + self.base_rate_per_block
-        normal_rate = self.kink * self.multiplier_per_block // 1e18 + self.base_rate_per_block
+            return utilization_rate * self.multiplier_per_block // EXP_SCALE + self.base_rate_per_block
+        normal_rate = self.kink * self.multiplier_per_block // EXP_SCALE + self.base_rate_per_block
         excess_util = utilization_rate - self.kink
-        return excess_util * self.jump_multiplier_per_block // 1e18 + normal_rate
+        return excess_util * self.jump * self.multiplier_per_block // EXP_SCALE + normal_rate
 
     def get_supply_rate(self, cash: int, borrows: int,
                         reserves: int, reserve_factor_mantissa: int) -> int:
-        one_minus_reserve_factor = 1e18 - reserve_factor_mantissa
+        one_minus_reserve_factor = EXP_SCALE - reserve_factor_mantissa
         borrow_rate = self.get_borrow_rate(cash, borrows, reserves)
-        rate_to_pool= borrow_rate * one_minus_reserve_factor // 1e18
-        return self.get_utilization_rate(cash, borrows, reserves) * rate_to_pool // 1e18
+        rate_to_pool= borrow_rate * one_minus_reserve_factor // EXP_SCALE
+        return self.get_utilization_rate(cash, borrows, reserves) * rate_to_pool // EXP_SCALE
 
     def get_utilization_rate(self, cash: int, borrows: int, reserves: int) -> int:
         # Utilization rate is 0 when there are no borrows
         if borrows == 0:
             return 0
 
-        return borrows * 1e18 // (cash + borrows - reserves)
+        return borrows * EXP_SCALE // (cash + borrows - reserves)
 
+
+@InterestRate.register("0x6bc8fe27d0c7207733656595e73c0d5cf7afae36")
+class USDTRateModel(JumpRateModel):
+    def __init__(self):
+        super().__init__()
+        self.kink = 900000000000000000
+        self.jump = 1
+        self.multiplier_per_block = 95129375951
 
 
 class BaseSlopeRateModel(InterestRate):

@@ -1,9 +1,18 @@
-from backd.protocols.compound.interest_rate_models import USDTRateModel
+from backd.protocols.compound.interest_rate_models import USDTRateModel, JumpRateModel
 from backd.protocols.compound.interest_rate_models import Base0bpsSlope2000bpsRateModel
 from backd.protocols.compound.interest_rate_models import Base200bpsSlope1000bpsRateModel
 from backd.protocols.compound.interest_rate_models import Base200bpsSlope3000bpsRateModel
 from backd.protocols.compound.interest_rate_models import Base500bpsSlope1200bpsRateModel
 from backd.protocols.compound.interest_rate_models import Base500bpsSlope1500bpsRateModel
+
+
+def test_jump_rate_model():
+    # https://etherscan.io/address/0x5562024784cc914069d67d89a28e3201bf7b57e7#readContract
+    model = JumpRateModel()
+
+    assert model.get_borrow_rate(2000, 1500, 1000) == 15854895991
+    assert model.get_supply_rate(2000, 1500, 1000, int(1e17)) == 8561643834
+    assert model.get_utilization_rate(2000, 1500, 1000) == 600000000000000000
 
 
 def test_usdt_rate_model():
