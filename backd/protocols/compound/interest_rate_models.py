@@ -66,13 +66,12 @@ class USDTRateModel(InterestRate):
         return borrows * 1e18 // (cash + borrows - reserves)
 
 
-@InterestRate.register("0xc64c4cba055efa614ce01f4bad8a9f519c4f8fab")
-class Base0bpsSlope2000bpsRateModel(InterestRate):
-    def __init__(self):
-        self.multiplier = 200000000000000000
-        self.blocks_per_year = 2102400
-        self.base_rate = 0
 
+class BaseSlopeRateModel(InterestRate):
+    def __init__(self, multiplier: int, base_rate: int):
+        self.blocks_per_year = 2102400
+        self.multiplier = multiplier
+        self.base_rate = base_rate
 
     def get_utilization_rate(self, cash: int, borrows: int) -> int:
         # Utilization rate is 0 when there are no borrows
@@ -98,3 +97,33 @@ class Base0bpsSlope2000bpsRateModel(InterestRate):
         utilization_rate_scaled = utilization_rate_muled // EXP_SCALE
         annual_borrow_rate = utilization_rate_scaled + self.base_rate
         return annual_borrow_rate
+
+
+@InterestRate.register("0xc64c4cba055efa614ce01f4bad8a9f519c4f8fab")
+class Base0bpsSlope2000bpsRateModel(BaseSlopeRateModel):
+    def __init__(self):
+        super().__init__(200000000000000000, 0)
+
+
+@InterestRate.register("0x0c3f8df27e1a00b47653fde878d68d35f00714c0")
+class Base200bpsSlope1000bpsRateModel(BaseSlopeRateModel):
+    def __init__(self):
+        super().__init__(100000000000000000, 20000000000000000)
+
+
+@InterestRate.register("0xbae04cbf96391086dc643e842b517734e214d698")
+class Base200bpsSlope3000bpsRateModel(BaseSlopeRateModel):
+    def __init__(self):
+        super().__init__(300000000000000000, 20000000000000000)
+
+
+@InterestRate.register("0xa1046abfc2598f48c44fb320d281d3f3c0733c9a")
+class Base500bpsSlope1200bpsRateModel(BaseSlopeRateModel):
+    def __init__(self):
+        super().__init__(120000000000000000, 50000000000000000)
+
+
+@InterestRate.register("0xd928c8ead620bb316d2cefe3caf81dc2dec6ff63")
+class Base500bpsSlope1500bpsRateModel(BaseSlopeRateModel):
+    def __init__(self):
+        super().__init__(150000000000000000, 50000000000000000)
