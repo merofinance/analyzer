@@ -1,6 +1,14 @@
 from abc import ABC, abstractmethod
 from ...base_factory import BaseFactory
 
+
+EXP_SCALE = int(1e18)
+
+
+def get_exp(num: int, denom: int) -> int:
+    return (num * EXP_SCALE) // denom
+
+
 class InterestRate(ABC, BaseFactory):
     @abstractmethod
     def get_borrow_rate(self, cash: int, borrows: int, reserves: int) -> int:
@@ -56,3 +64,37 @@ class USDTRateModel(InterestRate):
             return 0
 
         return borrows * 1e18 // (cash + borrows - reserves)
+
+
+@InterestRate.register("0xc64c4cba055efa614ce01f4bad8a9f519c4f8fab")
+class Base0bpsSlope2000bpsRateModel(InterestRate):
+    def __init__(self):
+        self.multiplier = 200000000000000000
+        self.blocks_per_year = 2102400
+        self.base_rate = 0
+
+
+    def get_utilization_rate(self, cash: int, borrows: int) -> int:
+        # Utilization rate is 0 when there are no borrows
+        if borrows == 0:
+            return 0
+
+        return get_exp(borrows, cash + borrows)
+
+    def get_borrow_rate(self, cash: int, borrows: int, reserves: int) -> int:
+        annual_borrow_rate = self.get_annual_borrow_rate(cash, borrows)
+        return annual_borrow_rate // self.blocks_per_year
+
+    def get_supply_rate(self, cash: int, borrows: int,
+                        reserves: int, reserve_factor_mantissa: int) -> int:
+        raise ValueError("supply rate not supported by this model")
+
+    def get_annual_borrow_rate(self, cash: int, borrows: int) -> int:
+        utilization_rate = self.get_utilization_rate(cash, borrows)
+
+        # Borrow Rate is 5% + UtilizationRate * 45% (baseRate + UtilizationRate * multiplier);
+        # 45% of utilizationRate, is `rate * 45 / 100`
+        utilization_rate_muled = utilization_rate * self.multiplier
+        utilization_rate_scaled = utilization_rate_muled // EXP_SCALE
+        annual_borrow_rate = utilization_rate_scaled + self.base_rate
+        return annual_borrow_rate
