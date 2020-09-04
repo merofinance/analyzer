@@ -29,3 +29,12 @@ def markets():
 def compound_dummy_events():
     with open(path.join(FIXTURES_PATH, "compound-dummy-events.jsonl")) as f:
         return [json.loads(line) for line in f]
+
+
+def get_event(compound_dummy_events, name, index=0):
+    return [v for v in compound_dummy_events if v["event"] == name][index]
+
+
+def get_events_until(compound_dummy_events, name, index=0):
+    indices = [i for i, e in enumerate(compound_dummy_events) if e["event"] == name]
+    return compound_dummy_events[:indices[index] + 1]

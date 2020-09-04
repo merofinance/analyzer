@@ -6,10 +6,12 @@ import pytest
 
 from backd.protocols.compound.processor import CompoundProcessor
 from backd.entities import State, PointInTime
+from tests.conftest import get_event, get_events_until
 
 
 MAIN_USER = "0x1234a"
 MAIN_MARKET = "0x1A3B"
+MAIN_ORACLE = "0xAB23"
 BORROW_MARKET = "0xA123"
 
 
@@ -39,7 +41,7 @@ def test_new_comptroller(processor: CompoundProcessor, compound_dummy_events):
 
 
 def test_new_interest_rate_model(processor: CompoundProcessor, compound_dummy_events):
-    events = compound_dummy_events[:2]
+    events = get_events_until(compound_dummy_events, "NewMarketInterestRateModel")
     state = State("compound")
     processor.process_events(state, events)
     market = state.markets.find_by_address(MAIN_MARKET)
@@ -220,6 +222,13 @@ def test_reserves_reduced(processor: CompoundProcessor, state: State, compound_d
     assert market.reserves == 20
 
 
+def test_price_posted(processor: CompoundProcessor, state: State, compound_dummy_events):
+    price_posted_event = get_event(compound_dummy_events, "PricePosted")
+    processor.process_event(state, price_posted_event)
+    assert len(state.oracles) == 1
+    assert state.oracles.get_oracle(MAIN_ORACLE).get_price(MAIN_MARKET) == 200
+
+
 def test_process_all(processor: CompoundProcessor, state: State, compound_dummy_events):
     processor.process_events(state, compound_dummy_events)
     collateral_market = state.markets.find_by_address(MAIN_MARKET)
@@ -232,12 +241,3 @@ def test_process_all(processor: CompoundProcessor, state: State, compound_dummy_
 
     liquidator_user_balance = collateral_market.users["0xab31"].balances
     assert liquidator_user_balance.token_balance == 55
-
-
-def get_event(compound_dummy_events, name, index=0):
-    return [v for v in compound_dummy_events if v["event"] == name][index]
-
-
-def get_events_until(compound_dummy_events, name, index=0):
-    indices = [i for i, e in enumerate(compound_dummy_events) if e["event"] == name]
-    return compound_dummy_events[:indices[index] + 1]

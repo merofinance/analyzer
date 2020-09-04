@@ -95,12 +95,48 @@ class Markets:
 
 
 @dataclass
+class Oracle:
+    prices: Dict[str, int] = None
+
+    def __post_init__(self):
+        if self.prices is None:
+            self.prices = {}
+
+    def update_price(self, token: str, price: int):
+        self.prices[token.lower()] = price
+
+    def get_price(self, token: str) -> int:
+        return self.prices.get(token.lower(), 0)
+
+
+@dataclass
+class Oracles:
+    oracles: Dict[str, Oracle] = None
+
+    def __post_init__(self):
+        if self.oracles is None:
+            self.oracles = {}
+
+    def get_oracle(self, oracle_address: str):
+        oracle_address = oracle_address.lower()
+        if oracle_address not in self.oracles:
+            self.oracles[oracle_address] = Oracle()
+        return self.oracles[oracle_address]
+
+    def __len__(self):
+        return len(self.oracles)
+
+
+@dataclass
 class State:
     protocol_name: str
     current_event_time: PointInTime = None
     last_event_time: PointInTime = None
     markets: Markets = None
+    oracles: Oracles = None
 
     def __post_init__(self):
         if self.markets is None:
             self.markets = Markets()
+        if self.oracles is None:
+            self.oracles = Oracles()
