@@ -70,21 +70,21 @@ class CompoundProcessor(Processor):
         assert 0 <= factor <= 1, f"close factor must be between 0 and 1, not {factor}"
         state.close_factor = factor
 
-    # def process_new_collateral_factor(self, state: State, _event_address: str, event_values: dict):
-    #     market = state.markets.find_by_address(event_values["cToken"])
-    #     market.collateral_factor = int(event_values["newCollateralFactorMantissa"]) / FACTORS_DIVISOR
+    def process_new_collateral_factor(self, state: State, _event_address: str, event_values: dict):
+        market = state.markets.find_by_address(event_values["cToken"])
+        market.collateral_factor = int(event_values["newCollateralFactorMantissa"]) / FACTORS_DIVISOR
 
-    # def process_market_listed(self, state: State, _event_address: str, event_values: dict):
-    #     market = state.markets.find_by_address(event_values["cToken"])
-    #     market.listed = True
+    def process_market_listed(self, state: State, _event_address: str, event_values: dict):
+        market = state.markets.find_by_address(event_values["cToken"])
+        market.listed = True
 
-    # def process_market_entered(self, state: State, _event_address: str, event_values: dict):
-    #     market = state.markets.find_by_address(event_values["cToken"])
-    #     market.users[event_values["account"]].entered = True
+    def process_market_entered(self, state: State, _event_address: str, event_values: dict):
+        market = state.markets.find_by_address(event_values["cToken"])
+        market.users[event_values["account"]].entered = True
 
-    # def process_market_exited(self, state: State, _event_address: str, event_values: dict):
-    #     market = state.markets.find_by_address(event_values["cToken"])
-    #     market.users[event_values["account"]].entered = False
+    def process_market_exited(self, state: State, _event_address: str, event_values: dict):
+        market = state.markets.find_by_address(event_values["cToken"])
+        market.users[event_values["account"]].entered = False
 
     def process_mint(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
