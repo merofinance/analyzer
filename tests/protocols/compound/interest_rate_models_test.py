@@ -1,6 +1,7 @@
 from backd.protocols.compound.interest_rate_models import USDTRateModel, JumpRateModel
 from backd.protocols.compound.interest_rate_models import DAIInterestRateModel
 from backd.protocols.compound.interest_rate_models import DAIInterestRateModelV2
+from backd.protocols.compound.interest_rate_models import DAIInterestRateModelV3
 from backd.protocols.compound.interest_rate_models import Base0bpsSlope2000bpsRateModel
 from backd.protocols.compound.interest_rate_models import Base200bpsSlope1000bpsRateModel
 from backd.protocols.compound.interest_rate_models import Base200bpsSlope3000bpsRateModel
@@ -96,3 +97,12 @@ def test_dai_interest_rate_model_v2(dsr_rates):
 
     assert model.get_borrow_rate(2000, 1500, 1000, BLOCK_NUMBER) == 6341958396
     assert model.get_supply_rate(2000, 1500, 1000, int(1e17), BLOCK_NUMBER) == 3424657533
+
+
+def test_dai_interest_rate_model_v3(dsr_rates):
+    # https://etherscan.io/address/0xfeD941d39905B23D6FAf02C8301d40bD4834E27F#readContract
+    dsr = DSR(dsr_rates)
+    model = DAIInterestRateModelV3(dsr)
+
+    assert model.get_borrow_rate(2000, 1500, 1000, BLOCK_NUMBER) == 14269406392
+    assert model.get_supply_rate(2000, 1500, 1000, int(1e17), BLOCK_NUMBER) == 7705479451

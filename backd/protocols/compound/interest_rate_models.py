@@ -190,3 +190,21 @@ class DAIInterestRateModelV2(DAIInterestRateModel):
             jump_multiplier_per_block=jump_multiplier_per_block,
             kink=kink,
         )
+
+
+@InterestRate.register("0xfed941d39905b23d6faf02c8301d40bd4834e27f")
+class DAIInterestRateModelV3(DAIInterestRateModel):
+    def __init__(self, dsr: DSR,
+                 *_args,
+                 base_rate_per_block: int = 0,
+                 multiplier_per_block: int = 23782343987,
+                 jump_multiplier_per_block: int = 518455098934,
+                 kink: int = 800000000000000000,
+                 **_kwargs):
+        super().__init__(
+            dsr=dsr,
+            base_rate_per_block=base_rate_per_block,
+            multiplier_per_block=multiplier_per_block,
+            jump_multiplier_per_block=jump_multiplier_per_block,
+            kink=kink,
+        )
