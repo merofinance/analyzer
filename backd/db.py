@@ -28,3 +28,7 @@ def create_indices():
 
 def iterate_events():
     return db.events.find().sort(SORT_KEY)
+
+
+def count_events():
+    return db.events.count_documents({})

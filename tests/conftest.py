@@ -25,7 +25,7 @@ def compound_redeem_event():
 @pytest.fixture
 def markets():
     return Markets(
-        [Market("0xa234", balances=Balances(1, 2)),
+        [Market("0xa234", balances=Balances(total_borrowed=1, total_supplied=2)),
          Market("0x1A3B"),
          Market("0xA123")])
 

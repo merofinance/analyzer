@@ -38,7 +38,11 @@ class CompoundProcessor(Processor):
             logger.debug("unknown event %s", event_name)
             return
 
-        func(state, event["address"], event["returnValues"])
+        try:
+            func(state, event["address"], event["returnValues"])
+        except AssertionError as e:
+            logger.error("error while processing %s", event)
+            raise e
 
     def process_new_comptroller(self, state: State, event_address: str, event_values: dict):
         # NOTE: process_new_comptroller is always the first event emitted in a new market
@@ -58,36 +62,34 @@ class CompoundProcessor(Processor):
     def process_new_reserve_factor(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
         factor = int(event_values["newReserveFactorMantissa"]) / FACTORS_DIVISOR
-        assert 0 <= factor <= 1, "close factor must be between 0 and 1"
+        assert 0 <= factor <= 1, f"close factor must be between 0 and 1, not {factor}"
         market.reserve_factor = factor
 
-    def process_new_close_factor(self, state: State, event_address: str, event_values: dict):
-        market = state.markets.find_by_address(event_address)
+    def process_new_close_factor(self, state: State, _event_address: str, event_values: dict):
         factor = int(event_values["newCloseFactorMantissa"]) / FACTORS_DIVISOR
-        assert 0 <= factor <= 1, "close factor must be between 0 and 1"
-        market.close_factor = factor
+        assert 0 <= factor <= 1, f"close factor must be between 0 and 1, not {factor}"
+        state.close_factor = factor
 
-    def process_new_collateral_factor(self, state: State, _event_address: str, event_values: dict):
-        market = state.markets.find_by_address(event_values["cToken"])
-        market.collateral_factor = int(event_values["newCollateralFactorMantissa"]) / FACTORS_DIVISOR
+    # def process_new_collateral_factor(self, state: State, _event_address: str, event_values: dict):
+    #     market = state.markets.find_by_address(event_values["cToken"])
+    #     market.collateral_factor = int(event_values["newCollateralFactorMantissa"]) / FACTORS_DIVISOR
 
-    def process_market_listed(self, state: State, _event_address: str, event_values: dict):
-        market = state.markets.find_by_address(event_values["cToken"])
-        market.listed = True
+    # def process_market_listed(self, state: State, _event_address: str, event_values: dict):
+    #     market = state.markets.find_by_address(event_values["cToken"])
+    #     market.listed = True
 
-    def process_market_entered(self, state: State, _event_address: str, event_values: dict):
-        market = state.markets.find_by_address(event_values["cToken"])
-        market.users[event_values["account"]].entered = True
+    # def process_market_entered(self, state: State, _event_address: str, event_values: dict):
+    #     market = state.markets.find_by_address(event_values["cToken"])
+    #     market.users[event_values["account"]].entered = True
 
-    def process_market_exited(self, state: State, _event_address: str, event_values: dict):
-        market = state.markets.find_by_address(event_values["cToken"])
-        market.users[event_values["account"]].entered = False
+    # def process_market_exited(self, state: State, _event_address: str, event_values: dict):
+    #     market = state.markets.find_by_address(event_values["cToken"])
+    #     market.users[event_values["account"]].entered = False
 
     def process_mint(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
         mint_amount = int(event_values["mintAmount"])
         market.balances.total_supplied += mint_amount
-        market.users[event_values["minter"]].balances.total_supplied += mint_amount
 
         market.balances.token_balance += int(event_values["mintTokens"])
 
@@ -95,15 +97,14 @@ class CompoundProcessor(Processor):
         market = state.markets.find_by_address(event_address)
         redeem_amount = int(event_values["redeemAmount"])
         redeem_tokens = int(event_values["redeemTokens"])
-        user_balances = market.users[event_values["redeemer"]].balances
 
-        assert market.balances.total_supplied >= redeem_amount, "supply can never be negative"
-        assert market.balances.token_balance >= redeem_tokens, "token balance can never be negative"
-        assert user_balances.total_supplied >= redeem_amount, "supply can never be negative"
+        assert market.balances.total_supplied >= redeem_amount, \
+                f"supply can never be negative, {market.balances.total_supplied} < {redeem_amount}"
+        assert market.balances.token_balance >= redeem_tokens, \
+                f"token balance can never be negative, {market.balances.token_balance} < {redeem_tokens}"
 
         market.balances.total_supplied -= redeem_amount
         market.balances.token_balance -= redeem_tokens
-        user_balances.total_supplied -= redeem_amount
 
     def process_transfer(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
@@ -112,7 +113,8 @@ class CompoundProcessor(Processor):
         from_ = event_values["from"]
         from_balances = market.users[from_].balances
         if from_ != event_address:
-            assert from_balances.token_balance >= amount, "token balance can never be negative"
+            assert from_balances.token_balance >= amount, \
+                f"token balance can never be negative, {from_balances.token_balance} < {amount}"
             from_balances.token_balance -= amount
 
         to = event_values["to"]
@@ -122,7 +124,9 @@ class CompoundProcessor(Processor):
     def process_borrow(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
         market.balances.total_borrowed += int(event_values["borrowAmount"])
+
         borrower = event_values["borrower"]
+        self.update_user_borrow(market, borrower)
         market.users[borrower].balances.total_borrowed += int(event_values["borrowAmount"])
 
     def process_repay_borrow(self, state: State, event_address: str, event_values: dict):
@@ -139,14 +143,18 @@ class CompoundProcessor(Processor):
 
     def process_reserves_reduced(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
-        assert market.reserves >= int(event_values["reduceAmount"]), "reserves can never be negative"
+        assert market.reserves >= int(event_values["reduceAmount"]), \
+            f"reserves can never be negative, {market.reserves} < {event_values['reduceAmount']}"
         market.reserves -= int(event_values["reduceAmount"])
 
     def _execute_repay(self, state: State, event_address: str, borrower: str, amount: int):
         market = state.markets.find_by_address(event_address)
+        self.update_user_borrow(market, borrower)
         user_balances = market.users[borrower].balances
-        assert market.balances.total_borrowed >= amount, "borrow can never be negative"
-        assert user_balances.total_borrowed >= amount, "borrow can never be negative"
+        assert market.balances.total_borrowed >= amount, \
+                f"borrow can never be negative, {market.balances.total_borrowed} < {amount}"
+        assert user_balances.total_borrowed >= amount, \
+                f"borrow can never be negative, {user_balances.total_borrowed} < {amount}"
 
         market.balances.total_borrowed -= amount
         user_balances.total_borrowed -= amount
@@ -159,6 +167,17 @@ class CompoundProcessor(Processor):
     def process_new_interest_params(self, state: State, event_address: str, event_values: dict):
         model = state.interest_rate_models.get_model(event_address)
         model.update_params(event_values)
+
+    def process_accrue_interest(self, state: State, event_address: str, event_values: dict):
+        market = state.markets.find_by_address(event_address)
+        market.borrow_index = int(event_values["borrowIndex"])
+
+    def update_user_borrow(self, market: Market, user_address: str):
+        user = market.users[user_address]
+        new_total_borrowed = user.balances.total_borrowed * market.borrow_index // user.borrow_index
+        market.balances.total_borrowed += new_total_borrowed - user.balances.total_borrowed
+        user.balances.total_borrowed = new_total_borrowed
+        user.borrow_index = market.borrow_index
 
     @classmethod
     def create_empty_state(cls) -> State:

@@ -20,20 +20,25 @@ class PointInTime:
 
 
 @dataclass
-class Balances:
+class UserBalances:
     total_borrowed: int = 0
-    total_supplied: int = 0
     token_balance: int = 0
 
 
 @dataclass
+class Balances(UserBalances):
+    total_supplied: int = 0
+
+
+@dataclass
 class MarketUser:
-    balances: Balances = None
+    balances: UserBalances = None
     entered: bool = False
+    borrow_index: int = int(1e18)
 
     def __post_init__(self):
         if self.balances is None:
-            self.balances = Balances()
+            self.balances = UserBalances()
 
 
 @dataclass(eq=False, repr=False)
@@ -43,11 +48,11 @@ class Market:
     balances: Balances = None
     reserve_factor: Decimal = Decimal("0")
     collateral_factor: Decimal = Decimal("0")
-    close_factor: Decimal = Decimal("0")
     users: Dict[str, MarketUser] = None
     listed: bool = False
     comptroller_address: str = None
     reserves: int = 0
+    borrow_index: int = int(1e18)
 
     def __post_init__(self):
         self.address = self.address.lower()

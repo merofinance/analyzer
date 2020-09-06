@@ -13,6 +13,7 @@ def process_all_events(protocol: str,
     processor_class = Processor.get(protocol)
     processor: Processor = processor_class(hooks=hooks)
     state = processor.create_empty_state()
+    events_count = db.count_events()
     events = db.iterate_events()
-    processor.process_events(state, events)
+    processor.process_events(state, events, total_count=events_count)
     return state

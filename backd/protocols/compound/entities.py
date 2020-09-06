@@ -1,5 +1,6 @@
 from typing import Dict
 from dataclasses import dataclass
+from decimal import Decimal
 
 from ...entities import State
 from ...tokens.dai.dsr import DSR
@@ -35,6 +36,7 @@ class InterestRateModels:
 class CompoundState(State):
     protocol_name: str = "compound"
     dsr: DSR = None
+    close_factor: Decimal = Decimal("0")
     interest_rate_models: InterestRateModels = None
 
     def __post_init__(self):

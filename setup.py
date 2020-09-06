@@ -8,6 +8,7 @@ setup(
         "pymongo",
         "stringcase",
         "smart-open",
+        "tqdm",
     ],
     extras_require={
         "dev": [

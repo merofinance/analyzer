@@ -34,13 +34,13 @@ def test_new_comptroller(processor: CompoundProcessor, dsr, compound_dummy_event
     assert len(state.markets) == 0
     processor.process_event(state, new_comptroller_event)
     assert state.current_event_time == PointInTime(123, 9, 1)
+    assert state.close_factor == Decimal("0")
     assert len(state.markets) == 1
     market = state.markets.find_by_address(MAIN_MARKET)
     assert market.comptroller_address == "0xc2a1"
     assert not market.listed
     assert market.reserve_factor == Decimal("0")
     assert market.collateral_factor == Decimal("0")
-    assert market.close_factor == Decimal("0")
 
 
 def test_new_interest_rate_model(processor: CompoundProcessor, dsr, compound_dummy_events):
@@ -76,8 +76,7 @@ def test_new_close_factor(processor: CompoundProcessor, dsr, compound_dummy_even
     events = get_events_until(compound_dummy_events, "NewCloseFactor")
     state = State(dsr=dsr)
     processor.process_events(state, events)
-    market = state.markets.find_by_address(MAIN_MARKET)
-    assert market.close_factor == Decimal("0.5")
+    assert state.close_factor == Decimal("0.5")
 
 
 def test_new_collateral_factor(processor: CompoundProcessor, dsr, compound_dummy_events):
@@ -123,7 +122,6 @@ def test_mint(processor: CompoundProcessor, state: State, compound_dummy_events)
     assert market.balances.total_borrowed == 0
 
     user_balances = market.users[MAIN_USER].balances
-    assert user_balances.total_supplied == 100
     assert user_balances.token_balance == 0
     assert user_balances.total_borrowed == 0
 
@@ -137,9 +135,14 @@ def test_borrow(processor: CompoundProcessor, state: State, compound_dummy_event
     assert market.balances.total_borrowed == 80
 
     user_balances = market.users[MAIN_USER].balances
-    assert user_balances.total_supplied == 0
     assert user_balances.token_balance == 0
     assert user_balances.total_borrowed == 80
+
+def test_accrue_interest(processor: CompoundProcessor, state: State, compound_dummy_events):
+    accrue_interest_event = get_event(compound_dummy_events, "AccrueInterest")
+    processor.process_event(state, accrue_interest_event)
+    market = state.markets.find_by_address(BORROW_MARKET)
+    assert market.borrow_index == 1033291579335879146
 
 
 def test_repay_borrow(processor: CompoundProcessor, state: State, compound_dummy_events):
@@ -156,7 +159,6 @@ def test_repay_borrow(processor: CompoundProcessor, state: State, compound_dummy
     assert market.balances.total_borrowed == 60
 
     user_balances = market.users[MAIN_USER].balances
-    assert user_balances.total_supplied == 0
     assert user_balances.token_balance == 0
     assert user_balances.total_borrowed == 60
 
@@ -175,7 +177,6 @@ def test_redeem(processor: CompoundProcessor, state: State, compound_dummy_event
     assert market.balances.total_borrowed == 0
 
     user_balances = market.users[MAIN_USER].balances
-    assert user_balances.total_supplied == 60
     assert user_balances.token_balance == 0
     assert user_balances.total_borrowed == 0
 
@@ -185,12 +186,10 @@ def test_transfer(processor: CompoundProcessor, state: State, compound_dummy_eve
     processor.process_event(state, transfer_event)
     market = state.markets.find_by_address(MAIN_MARKET)
     user_balances = market.users[MAIN_USER].balances
-    assert user_balances.total_supplied == 0
     assert user_balances.token_balance == 110
     assert user_balances.total_borrowed == 0
 
     market_balances = market.users[MAIN_MARKET].balances
-    assert market_balances.total_supplied == 0
     assert market_balances.token_balance == 0
     assert market_balances.total_borrowed == 0
 
@@ -206,18 +205,19 @@ def test_liquidate_borrow(processor: CompoundProcessor, state: State, compound_d
     collateral_market = state.markets.find_by_address(MAIN_MARKET)
     borrow_market = state.markets.find_by_address(BORROW_MARKET)
 
+    interets = 80 * 1033291579335879146 // int(1e18) - 80
+
     assert collateral_market.balances.token_balance == 65
     assert collateral_market.balances.total_supplied == 60
     assert collateral_market.balances.total_borrowed == 0
     assert borrow_market.balances.total_supplied == 0
     assert borrow_market.balances.token_balance == 0
-    assert borrow_market.balances.total_borrowed == 0
+    assert borrow_market.balances.total_borrowed == interets
 
     collateral_user_balances = collateral_market.users[MAIN_USER].balances
     borrow_user_balances = borrow_market.users[MAIN_USER].balances
     assert collateral_user_balances.token_balance == 65
-    assert collateral_user_balances.total_supplied == 60
-    assert borrow_user_balances.total_borrowed == 0
+    assert borrow_user_balances.total_borrowed == interets
 
 
 def test_reserves_added(processor: CompoundProcessor, state: State, compound_dummy_events):
@@ -253,7 +253,6 @@ def test_process_all(processor: CompoundProcessor, state: State, compound_dummy_
     collateral_user_balances = collateral_user.balances
     assert not collateral_user.entered
     assert collateral_user_balances.token_balance == 10
-    assert collateral_user_balances.total_supplied == 60
 
     liquidator_user_balance = collateral_market.users["0xab31"].balances
     assert liquidator_user_balance.token_balance == 55
