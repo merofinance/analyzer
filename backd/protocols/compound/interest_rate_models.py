@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
+from decimal import Decimal
+
 from ...base_factory import BaseFactory
+from ...tokens.dai.dsr import DSR
 
 
 EXP_SCALE = int(1e18)
@@ -74,7 +77,6 @@ class JumpRateModel(InterestRate):
 class USDTRateModel(JumpRateModel):
     def __init__(self, block_number, *_args, **_kwargs):
         super().__init__(block_number)
-        self.kink = 900000000000000000
         self.jump = 1
         self.multiplier_per_block = 95129375951
 
@@ -140,3 +142,29 @@ class Base500bpsSlope1200bpsRateModel(BaseSlopeRateModel):
 class Base500bpsSlope1500bpsRateModel(BaseSlopeRateModel):
     def __init__(self, block_number: int, *_args, **_kwargs):
         super().__init__(block_number, 150000000000000000, 50000000000000000)
+
+
+@InterestRate.register("0xec163986cc9a6593d6addcbff5509430d348030f")
+class DAIInterestRateModel(JumpRateModel):
+    def __init__(self, block_number: int, dsr: DSR, *_args, **_kwargs):
+        super().__init__(block_number)
+        self.dsr = dsr
+        self.assumed_one_minus_reserve_factor_mantissa = 950000000000000000
+        self.base_rate_per_block = 0
+        self.gap_per_block = 237823439
+        self.jump_multiplier_per_block = 570776255707
+        self.multiplier_per_block = 264248265
+
+    def get_supply_rate(self, cash: int, borrows: int,
+                        reserves: int, reserve_factor_mantissa: int) -> int:
+        protocol_rate = super().get_supply_rate(cash, borrows, reserves, reserve_factor_mantissa)
+        underlying = cash + borrows - reserves
+        if underlying == 0:
+            return protocol_rate
+        cash_rate = cash * self.dsr_per_block() // underlying
+        return cash_rate + protocol_rate
+
+    def dsr_per_block(self):
+        dsr = self.dsr.get(self.block_number)
+        scaled = (dsr - Decimal(10) ** 27) // Decimal(10) ** 9
+        return int(scaled * 15) # 15 seconds per block

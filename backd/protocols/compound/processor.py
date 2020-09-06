@@ -3,7 +3,6 @@
 
 # pylint: disable=no-self-use
 
-from typing import List
 from decimal import Decimal
 
 import stringcase
@@ -23,8 +22,8 @@ FACTORS_DIVISOR = Decimal(10) ** constants.COMPOUND_FACTORS_DECIMALS
 
 @Processor.register("compound")
 class CompoundProcessor(Processor):
-    def __init__(self, dsr_rates: List[dict]):
-        dsr_hook = DSRHook(dsr_rates)
+    def __init__(self):
+        dsr_hook = DSRHook()
         hooks = Hooks(prehooks=[dsr_hook.run])
         super().__init__(hooks=hooks)
 
@@ -152,8 +151,3 @@ class CompoundProcessor(Processor):
         oracle = state.oracles.get_oracle(event_address)
         value = int(event_values["newPriceMantissa"])
         oracle.update_price(event_values["asset"], value)
-
-    @classmethod
-    def create(cls):
-        dsr_rates = dai_utils.fetch_dsr_rates()
-        return cls(dsr_rates=dsr_rates)

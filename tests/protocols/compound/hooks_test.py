@@ -7,8 +7,8 @@ from backd import constants
 def test_dsr_hook(dsr_rates):
     state = State("compound")
     state.current_event_time = PointInTime(99, 1, 1)
-    dsr = DSR(dsr_rates)
-    hook = DSRHook(dsr)
+    state.dsr = DSR(dsr_rates)
+    hook = DSRHook()
 
     state.markets.add_market(Market("0x1234", balances=Balances(total_supplied=10)))
     hook.run(state)

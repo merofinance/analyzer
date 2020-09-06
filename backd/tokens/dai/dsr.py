@@ -3,6 +3,7 @@ from decimal import Decimal
 
 
 from ... import constants
+from . import utils
 
 
 DSR_DIVISOR = Decimal(10) ** constants.DSR_DECIMALS
@@ -15,5 +16,10 @@ class DSR:
     def get(self, block_number: int):
         for rate_info in self.dsr_rates:
             if rate_info["block"] <= block_number:
-                return rate_info["rate"] / DSR_DIVISOR
-        return self.dsr_rates[-1]["rate"] / DSR_DIVISOR
+                return rate_info["rate"]
+        return self.dsr_rates[-1]["rate"]
+
+    @classmethod
+    def create(cls):
+        dsr_rates = utils.fetch_dsr_rates()
+        return cls(dsr_rates=dsr_rates)
