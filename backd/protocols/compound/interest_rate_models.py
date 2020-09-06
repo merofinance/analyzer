@@ -172,3 +172,21 @@ class DAIInterestRateModel(JumpRateModel):
         dsr = self.dsr.get(block_number)
         scaled = (dsr - Decimal(10) ** 27) // Decimal(10) ** 9
         return int(scaled * 15) # 15 seconds per block
+
+
+@InterestRate.register("0x000000007675b5e1da008f037a0800b309e0c493")
+class DAIInterestRateModelV2(DAIInterestRateModel):
+    def __init__(self, dsr: DSR,
+                 *_args,
+                 base_rate_per_block: int = 0,
+                 multiplier_per_block: int = 10569930661,
+                 jump_multiplier_per_block: int = 570776255707,
+                 kink: int = 900000000000000000,
+                 **_kwargs):
+        super().__init__(
+            dsr=dsr,
+            base_rate_per_block=base_rate_per_block,
+            multiplier_per_block=multiplier_per_block,
+            jump_multiplier_per_block=jump_multiplier_per_block,
+            kink=kink,
+        )
