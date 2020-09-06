@@ -11,7 +11,7 @@ from ... import constants
 from ... import normalizer
 from ...event_processor import Processor
 from ...entities import Market
-from .state import CompoundState as State
+from .entities import CompoundState as State
 from ...logger import logger
 from ...hook import Hooks
 from .hooks import DSRHook
@@ -50,6 +50,7 @@ class CompoundProcessor(Processor):
                                                event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
         market.interest_rate_model = event_values["newInterestRateModel"]
+        state.interest_rate_models.create_model(market.interest_rate_model)
 
     def process_new_reserve_factor(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
@@ -151,3 +152,7 @@ class CompoundProcessor(Processor):
         oracle = state.oracles.get_oracle(event_address)
         value = int(event_values["newPriceMantissa"])
         oracle.update_price(event_values["asset"], value)
+
+    def process_new_interest_params(self, state: State, event_address: str, event_values: dict):
+        model = state.interest_rate_models.get_model(event_address)
+        model.update_params(event_values)

@@ -1,5 +1,5 @@
 from backd.protocols.compound.hooks import DSRHook
-from backd.protocols.compound.state import CompoundState
+from backd.protocols.compound.entities import CompoundState
 from backd.entities import Market, PointInTime, Balances
 from backd.tokens.dai.dsr import DSR
 from backd import constants

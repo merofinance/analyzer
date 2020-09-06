@@ -1,6 +1,6 @@
 from ... import constants
 from ...tokens.dai.dsr import DSR_DIVISOR
-from .state import State
+from .entities import State
 
 
 class DSRHook:

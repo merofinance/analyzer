@@ -6,8 +6,8 @@ import pytest
 
 from backd.protocols.compound.processor import CompoundProcessor
 from backd.entities import PointInTime
-from backd.protocols.compound.state import CompoundState as State
-from backd.tokens.dai.dsr import DSR
+from backd.protocols.compound.entities import CompoundState as State
+from backd.protocols.compound.interest_rate_models import JumpRateModel
 
 from tests.conftest import get_event, get_events_until
 
@@ -21,11 +21,6 @@ BORROW_MARKET = "0xA123"
 @pytest.fixture
 def processor():
     return CompoundProcessor()
-
-
-@pytest.fixture
-def dsr(dummy_dsr_rates):
-    return DSR(dummy_dsr_rates)
 
 
 @pytest.fixture
@@ -54,6 +49,19 @@ def test_new_interest_rate_model(processor: CompoundProcessor, dsr, compound_dum
     processor.process_events(state, events)
     market = state.markets.find_by_address(MAIN_MARKET)
     assert market.interest_rate_model == "0xbae0"
+    assert len(state.interest_rate_models) == 1
+
+
+def test_new_interest_params(processor: CompoundProcessor, dsr, compound_dummy_events):
+    events = get_events_until(compound_dummy_events, "NewInterestParams")
+    state = State("compound", dsr=dsr)
+    processor.process_events(state, events)
+    model = state.interest_rate_models.get_model("0xBAE0")
+    assert isinstance(model, JumpRateModel)
+    assert model.base_rate_per_block == 0
+    assert model.multiplier_per_block == 23782343987
+    assert model.kink == 800000000000000000
+    assert model.jump_multiplier_per_block  == 518455098934
 
 
 def test_new_reserve_factor(processor: CompoundProcessor, dsr, compound_dummy_events):

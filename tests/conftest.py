@@ -8,7 +8,9 @@ import pytest
 
 from backd import settings
 from backd import constants
+from backd.protocols.compound.interest_rate_models import InterestRateModel, JumpRateModel
 from backd.entities import Market, Balances, Markets
+from backd.tokens.dai.dsr import DSR
 
 
 FIXTURES_PATH = path.join(settings.PROJECT_ROOT, "tests", "fixtures")
@@ -51,6 +53,10 @@ def dsr_rates():
             rate["rate"] = D(rate["rate"])
         return rates
 
+@pytest.fixture
+def dsr(dummy_dsr_rates):
+    return DSR(dummy_dsr_rates)
+
 
 def get_event(compound_dummy_events, name, index=0):
     return [v for v in compound_dummy_events if v["event"] == name][index]
@@ -59,3 +65,8 @@ def get_event(compound_dummy_events, name, index=0):
 def get_events_until(compound_dummy_events, name, index=0):
     indices = [i for i, e in enumerate(compound_dummy_events) if e["event"] == name]
     return compound_dummy_events[:indices[index] + 1]
+
+
+@InterestRateModel.register("0xbae0")
+class DummyInterestRateModel(JumpRateModel):
+    pass

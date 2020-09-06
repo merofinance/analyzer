@@ -1,3 +1,5 @@
+import pytest
+
 from backd.protocols.compound.interest_rate_models import USDTRateModel, JumpRateModel
 from backd.protocols.compound.interest_rate_models import DAIInterestRateModel
 from backd.protocols.compound.interest_rate_models import DAIInterestRateModelV2
@@ -106,3 +108,15 @@ def test_dai_interest_rate_model_v3(dsr_rates):
 
     assert model.get_borrow_rate(2000, 1500, 1000, BLOCK_NUMBER) == 14269406392
     assert model.get_supply_rate(2000, 1500, 1000, int(1e17), BLOCK_NUMBER) == 7705479451
+
+
+def test_interest_rate_model_update_params():
+    model = JumpRateModel()
+    assert model.multiplier_per_block == 10569930661
+
+    model.update_params({"0": 100, "multiplierPerBlock": 100, "kink": 200, "1": 200})
+    assert model.kink == 200
+    assert model.multiplier_per_block == 100
+
+    with pytest.raises(ValueError):
+        model.update_params({"someParam": 100})

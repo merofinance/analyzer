@@ -1,11 +1,12 @@
 {"event": "PricePosted", "address": "0xAB23", "returnValues": {"asset": "0x1A3B", "previousPriceMantissa": 100, "requestedPriceMantissa": 200, "newPriceMantissa": 200}, "blockNumber": 122, "transactionIndex": 2, "logIndex": 1}
 {"event": "NewComptroller", "address": "0x1A3B", "returnValues": {"oldComptroller": "0x0000", "newComptroller": "0xC2A1"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 2}
 {"event": "NewMarketInterestRateModel", "address": "0x1A3B", "returnValues": {"oldInterestRateModel": "0x0000", "newInterestRateModel": "0xBAE0"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 3}
-{"event": "NewReserveFactor", "address": "0x1A3B", "returnValues": {"oldReserveFactorMantissa": "0", "newReserveFactorMantissa": "100000000000000000"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 4}
-{"event": "NewCloseFactor", "address": "0x1A3B", "returnValues": {"oldCloseFactorMantissa": "0", "newCloseFactorMantissa": "500000000000000000"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 5}
-{"event": "NewCollateralFactor", "address": "0xC2A1", "returnValues": {"cToken": "0x1A3B", "oldCollateralFactorMantissa": "0", "newCollateralFactorMantissa": "400000000000000000"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 6}
-{"event": "MarketListed", "address": "0xC2A1", "returnValues": {"cToken": "0x1A3B"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 7}
-{"event": "MarketEntered", "address": "0xC2A1", "returnValues": {"cToken": "0x1A3B", "account": "0x1234A"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 8}
+{"event": "NewInterestParams", "address": "0xBAE0", "returnValues": {"0":"0","1": "23782343987","2": "518455098934", "3": "800000000000000000", "baseRatePerBlock":"0", "multiplierPerBlock":"23782343987","jumpMultiplierPerBlock":"518455098934","kink":"800000000000000000"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 4}
+{"event": "NewReserveFactor", "address": "0x1A3B", "returnValues": {"oldReserveFactorMantissa": "0", "newReserveFactorMantissa": "100000000000000000"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 5}
+{"event": "NewCloseFactor", "address": "0x1A3B", "returnValues": {"oldCloseFactorMantissa": "0", "newCloseFactorMantissa": "500000000000000000"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 6}
+{"event": "NewCollateralFactor", "address": "0xC2A1", "returnValues": {"cToken": "0x1A3B", "oldCollateralFactorMantissa": "0", "newCollateralFactorMantissa": "400000000000000000"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 7}
+{"event": "MarketListed", "address": "0xC2A1", "returnValues": {"cToken": "0x1A3B"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 8}
+{"event": "MarketEntered", "address": "0xC2A1", "returnValues": {"cToken": "0x1A3B", "account": "0x1234A"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 9}
 {"event": "Mint", "address": "0x1A3B", "returnValues": {"minter": "0x1234A", "mintAmount": "100", "mintTokens": "110"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 2}
 {"event": "Transfer", "address": "0x1A3B", "returnValues": {"from": "0x1A3B", "to": "0x1234A", "amount": "110"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 3}
 {"event": "Borrow", "address": "0xA123", "returnValues": {"borrower": "0x1234A", "borrowAmount": "80", "accountBorrows": "80", "totalBorrows": "200"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 4}
