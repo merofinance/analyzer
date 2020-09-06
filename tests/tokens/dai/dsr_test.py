@@ -15,6 +15,6 @@ from backd.tokens.dai.dsr import DSR, DSR_DIVISOR
     (110, D("1.5") * DSR_DIVISOR),
     (112, D("1.5") * DSR_DIVISOR),
 ])
-def test_dsr_get(dsr_rates, block_number, expected):
-    dsr = DSR(dsr_rates)
+def test_dsr_get(dummy_dsr_rates, block_number, expected):
+    dsr = DSR(dummy_dsr_rates)
     assert dsr.get(block_number) == expected

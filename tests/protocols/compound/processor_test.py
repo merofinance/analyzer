@@ -24,8 +24,8 @@ def processor():
 
 
 @pytest.fixture
-def dsr(dsr_rates):
-    return DSR(dsr_rates)
+def dsr(dummy_dsr_rates):
+    return DSR(dummy_dsr_rates)
 
 
 @pytest.fixture

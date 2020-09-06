@@ -5,8 +5,8 @@ from backd.tokens.dai.dsr import DSR
 from backd import constants
 
 
-def test_dsr_hook(dsr_rates):
-    dsr = DSR(dsr_rates)
+def test_dsr_hook(dummy_dsr_rates):
+    dsr = DSR(dummy_dsr_rates)
     state = CompoundState("compound", dsr=dsr)
     state.current_event_time = PointInTime(99, 1, 1)
     hook = DSRHook()

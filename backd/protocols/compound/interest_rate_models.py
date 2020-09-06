@@ -39,13 +39,14 @@ class InterestRate(ABC, BaseFactory):
 
 @InterestRate.register("0x5562024784cc914069d67d89a28e3201bf7b57e7")
 class JumpRateModel(InterestRate):
-    def __init__(self, *_args, **_kwargs):
+    def __init__(self, *_args, jump=40, multiplier_per_block=10569930661, **_kwargs):
         super().__init__()
         self.base_rate_per_block = 9512937595
         self.blocks_per_year = 2102400
         self.kink = 900000000000000000
-        self.jump = 40
-        self.multiplier_per_block = 10569930661
+        self.jump = jump
+        self.multiplier_per_block = multiplier_per_block
+        self.jump_multiplier_per_block = self.jump * self.multiplier_per_block
 
     def get_borrow_rate(self, cash: int, borrows: int, reserves: int, block_number: int) -> int:
         utilization_rate = self.get_utilization_rate(cash, borrows, reserves)
@@ -53,7 +54,7 @@ class JumpRateModel(InterestRate):
             return utilization_rate * self.multiplier_per_block // EXP_SCALE + self.base_rate_per_block
         normal_rate = self.kink * self.multiplier_per_block // EXP_SCALE + self.base_rate_per_block
         excess_util = utilization_rate - self.kink
-        return excess_util * self.jump * self.multiplier_per_block // EXP_SCALE + normal_rate
+        return excess_util * self.jump_multiplier_per_block // EXP_SCALE + normal_rate
 
     def get_supply_rate(self, cash: int, borrows: int,
                         reserves: int, reserve_factor_mantissa: int, block_number: int) -> int:
@@ -73,9 +74,7 @@ class JumpRateModel(InterestRate):
 @InterestRate.register("0x6bc8fe27d0c7207733656595e73c0d5cf7afae36")
 class USDTRateModel(JumpRateModel):
     def __init__(self, *_args, **_kwargs):
-        super().__init__()
-        self.jump = 1
-        self.multiplier_per_block = 95129375951
+        super().__init__(jump=1, multiplier_per_block=95129375951)
 
 
 class BaseSlopeRateModel(InterestRate):
@@ -143,14 +142,21 @@ class Base500bpsSlope1500bpsRateModel(BaseSlopeRateModel):
 
 @InterestRate.register("0xec163986cc9a6593d6addcbff5509430d348030f")
 class DAIInterestRateModel(JumpRateModel):
-    def __init__(self, dsr: DSR, *_args, **_kwargs):
+    def __init__(self, dsr: DSR,
+                 *_args,
+                 base_rate_per_block: int = 19637062989,
+                 multiplier_per_block: int = 264248265,
+                 jump_multiplier_per_block: int = 570776255707,
+                 kink: int = 900000000000000000,
+                 **_kwargs):
         super().__init__()
         self.dsr = dsr
         self.assumed_one_minus_reserve_factor_mantissa = 950000000000000000
-        self.base_rate_per_block = 0
+        self.base_rate_per_block = base_rate_per_block
         self.gap_per_block = 237823439
-        self.jump_multiplier_per_block = 570776255707
-        self.multiplier_per_block = 264248265
+        self.jump_multiplier_per_block = jump_multiplier_per_block
+        self.multiplier_per_block = multiplier_per_block
+        self.kink = kink
 
     def get_supply_rate(self, cash: int, borrows: int,
                         reserves: int, reserve_factor_mantissa: int, block_number: int) -> int:

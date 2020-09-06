@@ -35,12 +35,21 @@ def compound_dummy_events():
 
 
 @pytest.fixture
-def dsr_rates():
+def dummy_dsr_rates():
     return [
         {"block": 100, "rate": D("1.0") * 10 ** constants.DSR_DECIMALS},
         {"block": 105, "rate": D("1.1") * 10 ** constants.DSR_DECIMALS},
         {"block": 110, "rate": D("1.5") * 10 ** constants.DSR_DECIMALS},
     ]
+
+
+@pytest.fixture
+def dsr_rates():
+    with open(path.join(FIXTURES_PATH, "dsr-rates.json")) as f:
+        rates = json.load(f)
+        for rate in rates:
+            rate["rate"] = D(rate["rate"])
+        return rates
 
 
 def get_event(compound_dummy_events, name, index=0):
