@@ -15,6 +15,7 @@ from .entities import CompoundState as State
 from ...logger import logger
 from ...hook import Hooks
 from .hooks import DSRHook
+from ...tokens.dai.dsr import DSR
 
 
 FACTORS_DIVISOR = Decimal(10) ** constants.COMPOUND_FACTORS_DECIMALS
@@ -22,9 +23,11 @@ FACTORS_DIVISOR = Decimal(10) ** constants.COMPOUND_FACTORS_DECIMALS
 
 @Processor.register("compound")
 class CompoundProcessor(Processor):
-    def __init__(self):
+    def __init__(self, hooks: Hooks = None):
+        if hooks is None:
+            hooks = Hooks()
         dsr_hook = DSRHook()
-        hooks = Hooks(prehooks=[dsr_hook.run])
+        hooks.prehooks.insert(0, dsr_hook)
         super().__init__(hooks=hooks)
 
     def _process_event(self, state, event):
@@ -156,3 +159,7 @@ class CompoundProcessor(Processor):
     def process_new_interest_params(self, state: State, event_address: str, event_values: dict):
         model = state.interest_rate_models.get_model(event_address)
         model.update_params(event_values)
+
+    @classmethod
+    def create_empty_state(cls) -> State:
+        return State(dsr=DSR.create())

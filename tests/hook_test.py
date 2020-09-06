@@ -13,7 +13,7 @@ class DummyHook:
 
 def test_hooks():
     state = State("dummy")
-    hooks = Hooks(prehooks=[DummyHook().run])
+    hooks = Hooks(prehooks=[DummyHook()])
     state.current_event_time = PointInTime(100, 1, 1)
     hooks.execute_prehooks(state)
     assert len(state.markets) == 1

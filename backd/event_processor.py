@@ -1,4 +1,4 @@
-from typing import List
+from typing import Iterable
 from abc import ABC, abstractmethod
 
 from .entities import PointInTime, State
@@ -10,7 +10,7 @@ class Processor(ABC, BaseFactory):
     def __init__(self, hooks: Hooks = None):
         self.hooks = hooks
 
-    def process_events(self, state: State, events: List[dict]):
+    def process_events(self, state: State, events: Iterable[dict]):
         for event in events:
             self.process_event(state, event)
 
@@ -27,6 +27,6 @@ class Processor(ABC, BaseFactory):
     def _process_event(self, state: State, event: dict):
         pass
 
-    @classmethod
-    def create(cls):
-        return cls()
+    @abstractmethod
+    def create_empty_state(self) -> State:
+        pass

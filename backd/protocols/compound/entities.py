@@ -33,6 +33,7 @@ class InterestRateModels:
 
 @dataclass
 class CompoundState(State):
+    protocol_name: str = "compound"
     dsr: DSR = None
     interest_rate_models: InterestRateModels = None
 
