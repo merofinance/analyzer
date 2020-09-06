@@ -47,7 +47,7 @@ def dummy_dsr_rates():
 
 @pytest.fixture
 def dsr_rates():
-    with open(path.join(FIXTURES_PATH, "dsr-rates.json")) as f:
+    with open(path.join(settings.PROJECT_ROOT, "data", "dsr-rates.json")) as f:
         rates = []
         for line in f:
             rate = json.loads(line)

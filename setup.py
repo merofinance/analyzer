@@ -16,5 +16,8 @@ setup(
             "jupyter",
             "pytest",
         ]
+    },
+    entry_points = {
+        "console_scripts": ["backd=backd.cli:run"],
     }
 )
