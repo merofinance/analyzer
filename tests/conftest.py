@@ -1,10 +1,13 @@
 from os import path
 import json
+from decimal import Decimal as D
+
 
 import pytest
 
 
 from backd import settings
+from backd import constants
 from backd.entities import Market, Balances, Markets
 
 
@@ -29,6 +32,15 @@ def markets():
 def compound_dummy_events():
     with open(path.join(FIXTURES_PATH, "compound-dummy-events.jsonl")) as f:
         return [json.loads(line) for line in f]
+
+
+@pytest.fixture
+def dsr_rates():
+    return [
+        {"block": 100, "rate": D("1.0") * 10 ** constants.DSR_DECIMALS},
+        {"block": 105, "rate": D("1.1") * 10 ** constants.DSR_DECIMALS},
+        {"block": 110, "rate": D("1.5") * 10 ** constants.DSR_DECIMALS},
+    ]
 
 
 def get_event(compound_dummy_events, name, index=0):

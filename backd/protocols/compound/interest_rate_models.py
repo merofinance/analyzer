@@ -10,6 +10,9 @@ def get_exp(num: int, denom: int) -> int:
 
 
 class InterestRate(ABC, BaseFactory):
+    def __init__(self, block_number: int):
+        self.block_number = block_number
+
     @abstractmethod
     def get_borrow_rate(self, cash: int, borrows: int, reserves: int) -> int:
         """Calculates the current borrow interest rate per block
@@ -36,7 +39,8 @@ class InterestRate(ABC, BaseFactory):
 
 @InterestRate.register("0x5562024784cc914069d67d89a28e3201bf7b57e7")
 class JumpRateModel(InterestRate):
-    def __init__(self):
+    def __init__(self, block_number: int, *_args, **_kwargs):
+        super().__init__(block_number)
         self.base_rate_per_block = 9512937595
         self.blocks_per_year = 2102400
         self.kink = 900000000000000000
@@ -68,15 +72,16 @@ class JumpRateModel(InterestRate):
 
 @InterestRate.register("0x6bc8fe27d0c7207733656595e73c0d5cf7afae36")
 class USDTRateModel(JumpRateModel):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, block_number, *_args, **_kwargs):
+        super().__init__(block_number)
         self.kink = 900000000000000000
         self.jump = 1
         self.multiplier_per_block = 95129375951
 
 
 class BaseSlopeRateModel(InterestRate):
-    def __init__(self, multiplier: int, base_rate: int):
+    def __init__(self, block_number: int, multiplier: int, base_rate: int):
+        super().__init__(block_number)
         self.blocks_per_year = 2102400
         self.multiplier = multiplier
         self.base_rate = base_rate
@@ -109,29 +114,29 @@ class BaseSlopeRateModel(InterestRate):
 
 @InterestRate.register("0xc64c4cba055efa614ce01f4bad8a9f519c4f8fab")
 class Base0bpsSlope2000bpsRateModel(BaseSlopeRateModel):
-    def __init__(self):
-        super().__init__(200000000000000000, 0)
+    def __init__(self, block_number: int, *_args, **_kwargs):
+        super().__init__(block_number, 200000000000000000, 0)
 
 
 @InterestRate.register("0x0c3f8df27e1a00b47653fde878d68d35f00714c0")
 class Base200bpsSlope1000bpsRateModel(BaseSlopeRateModel):
-    def __init__(self):
-        super().__init__(100000000000000000, 20000000000000000)
+    def __init__(self, block_number: int, *_args, **_kwargs):
+        super().__init__(block_number, 100000000000000000, 20000000000000000)
 
 
 @InterestRate.register("0xbae04cbf96391086dc643e842b517734e214d698")
 class Base200bpsSlope3000bpsRateModel(BaseSlopeRateModel):
-    def __init__(self):
-        super().__init__(300000000000000000, 20000000000000000)
+    def __init__(self, block_number: int, *_args, **_kwargs):
+        super().__init__(block_number, 300000000000000000, 20000000000000000)
 
 
 @InterestRate.register("0xa1046abfc2598f48c44fb320d281d3f3c0733c9a")
 class Base500bpsSlope1200bpsRateModel(BaseSlopeRateModel):
-    def __init__(self):
-        super().__init__(120000000000000000, 50000000000000000)
+    def __init__(self, block_number: int, *_args, **_kwargs):
+        super().__init__(block_number, 120000000000000000, 50000000000000000)
 
 
 @InterestRate.register("0xd928c8ead620bb316d2cefe3caf81dc2dec6ff63")
 class Base500bpsSlope1500bpsRateModel(BaseSlopeRateModel):
-    def __init__(self):
-        super().__init__(150000000000000000, 50000000000000000)
+    def __init__(self, block_number: int, *_args, **_kwargs):
+        super().__init__(block_number, 150000000000000000, 50000000000000000)

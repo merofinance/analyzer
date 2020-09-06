@@ -1,18 +1,14 @@
-from decimal import Decimal as D
-
 from backd.protocols.compound.hooks import DSRHook
 from backd.entities import Market, State, PointInTime, Balances
+from backd.tokens.dai.dsr import DSR
 from backd import constants
 
 
-def test_dsr_hook():
+def test_dsr_hook(dsr_rates):
     state = State("compound")
     state.current_event_time = PointInTime(99, 1, 1)
-    hook = DSRHook([
-        {"block": 100, "rate": D("1.0") * 10 ** constants.DSR_DECIMALS},
-        {"block": 105, "rate": D("1.1") * 10 ** constants.DSR_DECIMALS},
-        {"block": 110, "rate": D("1.5") * 10 ** constants.DSR_DECIMALS},
-    ])
+    dsr = DSR(dsr_rates)
+    hook = DSRHook(dsr)
 
     state.markets.add_market(Market("0x1234", balances=Balances(total_supplied=10)))
     hook.run(state)
