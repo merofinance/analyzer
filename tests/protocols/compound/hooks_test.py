@@ -1,13 +1,14 @@
 from backd.protocols.compound.hooks import DSRHook
-from backd.entities import Market, State, PointInTime, Balances
+from backd.protocols.compound.state import CompoundState
+from backd.entities import Market, PointInTime, Balances
 from backd.tokens.dai.dsr import DSR
 from backd import constants
 
 
 def test_dsr_hook(dsr_rates):
-    state = State("compound")
+    dsr = DSR(dsr_rates)
+    state = CompoundState("compound", dsr=dsr)
     state.current_event_time = PointInTime(99, 1, 1)
-    state.dsr = DSR(dsr_rates)
     hook = DSRHook()
 
     state.markets.add_market(Market("0x1234", balances=Balances(total_supplied=10)))

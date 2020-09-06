@@ -6,7 +6,7 @@ import pytest
 
 from backd.protocols.compound.processor import CompoundProcessor
 from backd.entities import PointInTime
-from backd.protocols.compound.state import State
+from backd.protocols.compound.state import CompoundState as State
 from backd.tokens.dai.dsr import DSR
 
 from tests.conftest import get_event, get_events_until
@@ -30,12 +30,12 @@ def dsr(dsr_rates):
 
 @pytest.fixture
 def state(markets, dsr):
-    return State("compound", dsr, markets=markets)
+    return State("compound", dsr=dsr, markets=markets)
 
 
 def test_new_comptroller(processor: CompoundProcessor, dsr, compound_dummy_events):
     new_comptroller_event = get_event(compound_dummy_events, "NewComptroller")
-    state = State("compound", dsr)
+    state = State("compound", dsr=dsr)
     assert len(state.markets) == 0
     processor.process_event(state, new_comptroller_event)
     assert state.current_event_time == PointInTime(123, 9, 2)
@@ -50,7 +50,7 @@ def test_new_comptroller(processor: CompoundProcessor, dsr, compound_dummy_event
 
 def test_new_interest_rate_model(processor: CompoundProcessor, dsr, compound_dummy_events):
     events = get_events_until(compound_dummy_events, "NewMarketInterestRateModel")
-    state = State("compound", dsr)
+    state = State("compound", dsr=dsr)
     processor.process_events(state, events)
     market = state.markets.find_by_address(MAIN_MARKET)
     assert market.interest_rate_model == "0xbae0"
@@ -58,7 +58,7 @@ def test_new_interest_rate_model(processor: CompoundProcessor, dsr, compound_dum
 
 def test_new_reserve_factor(processor: CompoundProcessor, dsr, compound_dummy_events):
     events = get_events_until(compound_dummy_events, "NewReserveFactor")
-    state = State("compound", dsr)
+    state = State("compound", dsr=dsr)
     processor.process_events(state, events)
     market = state.markets.find_by_address(MAIN_MARKET)
     assert market.reserve_factor == Decimal("0.1")
@@ -66,7 +66,7 @@ def test_new_reserve_factor(processor: CompoundProcessor, dsr, compound_dummy_ev
 
 def test_new_close_factor(processor: CompoundProcessor, dsr, compound_dummy_events):
     events = get_events_until(compound_dummy_events, "NewCloseFactor")
-    state = State("compound", dsr)
+    state = State("compound", dsr=dsr)
     processor.process_events(state, events)
     market = state.markets.find_by_address(MAIN_MARKET)
     assert market.close_factor == Decimal("0.5")
@@ -74,7 +74,7 @@ def test_new_close_factor(processor: CompoundProcessor, dsr, compound_dummy_even
 
 def test_new_collateral_factor(processor: CompoundProcessor, dsr, compound_dummy_events):
     events = get_events_until(compound_dummy_events, "NewCollateralFactor")
-    state = State("compound", dsr)
+    state = State("compound", dsr=dsr)
     processor.process_events(state, events)
     market = state.markets.find_by_address(MAIN_MARKET)
     assert market.collateral_factor == Decimal("0.4")
@@ -82,7 +82,7 @@ def test_new_collateral_factor(processor: CompoundProcessor, dsr, compound_dummy
 
 def test_market_listed(processor: CompoundProcessor, dsr, compound_dummy_events):
     events = get_events_until(compound_dummy_events, "MarketListed")
-    state = State("compound", dsr)
+    state = State("compound", dsr=dsr)
     processor.process_events(state, events)
     market = state.markets.find_by_address(MAIN_MARKET)
     assert market.listed
@@ -90,7 +90,7 @@ def test_market_listed(processor: CompoundProcessor, dsr, compound_dummy_events)
 
 def test_market_entered(processor: CompoundProcessor, dsr, compound_dummy_events):
     events = get_events_until(compound_dummy_events, "MarketEntered")
-    state = State("compound", dsr)
+    state = State("compound", dsr=dsr)
     processor.process_events(state, events)
     market = state.markets.find_by_address(MAIN_MARKET)
     assert market.users[MAIN_USER].entered
@@ -98,7 +98,7 @@ def test_market_entered(processor: CompoundProcessor, dsr, compound_dummy_events
 
 def test_market_exited(processor: CompoundProcessor, dsr, compound_dummy_events):
     events = get_events_until(compound_dummy_events, "MarketEntered")
-    state = State("compound", dsr)
+    state = State("compound", dsr=dsr)
     processor.process_events(state, events)
     market_exited_event = get_event(compound_dummy_events, "MarketExited")
     processor.process_event(state, market_exited_event)

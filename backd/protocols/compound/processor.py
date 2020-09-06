@@ -10,11 +10,11 @@ import stringcase
 from ... import constants
 from ... import normalizer
 from ...event_processor import Processor
-from ...entities import State, Market
+from ...entities import Market
+from .state import CompoundState as State
 from ...logger import logger
 from ...hook import Hooks
 from .hooks import DSRHook
-from ...tokens.dai import utils as dai_utils
 
 
 FACTORS_DIVISOR = Decimal(10) ** constants.COMPOUND_FACTORS_DECIMALS
