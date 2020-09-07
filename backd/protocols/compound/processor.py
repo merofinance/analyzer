@@ -98,8 +98,10 @@ class CompoundProcessor(Processor):
         redeem_amount = int(event_values["redeemAmount"])
         redeem_tokens = int(event_values["redeemTokens"])
 
-        assert market.balances.total_supplied >= redeem_amount, \
-                f"supply can never be negative, {market.balances.total_supplied} < {redeem_amount}"
+        # NOTE: the following assert could fail for ERC20 based cTokens because
+        # someone could transfer the underlying token directly to the cTokens address
+        # assert market.balances.total_supplied >= redeem_amount, \
+        #         f"supply can never be negative, {market.balances.total_supplied} < {redeem_amount}"
         assert market.balances.token_balance >= redeem_tokens, \
                 f"token balance can never be negative, {market.balances.token_balance} < {redeem_tokens}"
 
@@ -125,8 +127,11 @@ class CompoundProcessor(Processor):
         market = state.markets.find_by_address(event_address)
         amount = int(event_values["borrowAmount"])
         market.balances.total_borrowed += amount
-        assert market.balances.total_supplied >= amount, \
-                f"total supplied can never be negative, {market.balances.total_supplied} < {amount}"
+
+        # NOTE: the following assert could fail for ERC20 based cTokens because
+        # someone could transfer the underlying token directly to the cTokens address
+        # assert market.balances.total_supplied >= amount, \
+        #         f"total supplied can never be negative, {market.balances.total_supplied} < {amount}"
         market.balances.total_supplied -= amount
 
         borrower = event_values["borrower"]

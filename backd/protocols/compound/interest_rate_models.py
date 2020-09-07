@@ -85,6 +85,15 @@ class JumpRateModel(InterestRateModel):
         return borrows * EXP_SCALE // (cash + borrows - reserves)
 
 
+@InterestRateModel.register("0xfb564da37b41b2f6b6edcc3e56fbf523bd9f2012")
+class JumpRateModelV2(JumpRateModel):
+    def __init__(self, *_args, **_kwargs):
+        super().__init__(multiplier_per_block=23782343987)
+        self.kink = 800000000000000000
+        self.jump_multiplier_per_block = 518455098934
+        self.base_rate_per_block = 0
+
+
 @InterestRateModel.register("0x6bc8fe27d0c7207733656595e73c0d5cf7afae36")
 class USDTRateModel(JumpRateModel):
     def __init__(self, *_args, **_kwargs):

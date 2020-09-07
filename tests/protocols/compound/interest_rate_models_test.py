@@ -1,6 +1,7 @@
 import pytest
 
 from backd.protocols.compound.interest_rate_models import USDTRateModel, JumpRateModel
+from backd.protocols.compound.interest_rate_models import JumpRateModelV2
 from backd.protocols.compound.interest_rate_models import DAIInterestRateModel
 from backd.protocols.compound.interest_rate_models import DAIInterestRateModelV2
 from backd.protocols.compound.interest_rate_models import DAIInterestRateModelV3
@@ -21,6 +22,14 @@ def test_jump_rate_model():
 
     assert model.get_borrow_rate(2000, 1500, 1000, BLOCK_NUMBER) == 15854895991
     assert model.get_supply_rate(2000, 1500, 1000, int(1e17), BLOCK_NUMBER) == 8561643834
+    assert model.get_utilization_rate(2000, 1500, 1000) == 600000000000000000
+
+def test_jump_rate_model_v2():
+    # https://etherscan.io/address/0xfb564da37b41b2f6b6edcc3e56fbf523bd9f2012#readContract
+    model = JumpRateModelV2()
+
+    assert model.get_borrow_rate(2000, 1500, 1000, BLOCK_NUMBER) == 14269406392
+    assert model.get_supply_rate(2000, 1500, 1000, int(1e17), BLOCK_NUMBER) == 7705479451
     assert model.get_utilization_rate(2000, 1500, 1000) == 600000000000000000
 
 
