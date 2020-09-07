@@ -195,12 +195,8 @@ def test_transfer(processor: CompoundProcessor, state: State, compound_dummy_eve
 
 
 def test_liquidate_borrow(processor: CompoundProcessor, state: State, compound_dummy_events):
-    liquidate_event = get_event(compound_dummy_events, "LiquidateBorrow")
-    with pytest.raises(AssertionError):
-        processor.process_event(state, liquidate_event)
-
-    # process everything but the last transfer
-    events = get_events_until(compound_dummy_events, "LiquidateBorrow")
+    # get liquidation and next repay
+    events = get_events_until(compound_dummy_events, "RepayBorrow", 1)
     processor.process_events(state, events)
     collateral_market = state.markets.find_by_address(MAIN_MARKET)
     borrow_market = state.markets.find_by_address(BORROW_MARKET)

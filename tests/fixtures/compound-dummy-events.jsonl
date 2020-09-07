@@ -16,7 +16,8 @@
 {"event": "Redeem", "address": "0x1A3B", "returnValues": {"redeemer": "0x1234A", "redeemAmount": "40", "redeemTokens": "45"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 7}
 {"event": "Transfer", "address": "0x1A3B", "returnValues": {"from": "0x1234A", "to": "0x1A3B", "amount": "45"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 8}
 {"event": "LiquidateBorrow", "address": "0xA123", "returnValues": {"liquidator": "0xAB31", "borrower": "0x1234A", "repayAmount": "60", "cTokenCollateral": "0x1A3B", "seizeTokens": "55"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 9}
-{"event": "Transfer", "address": "0x1A3B", "returnValues": {"from": "0x1234A", "to": "0xAB31", "amount": "55"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 10}
+{"event": "RepayBorrow", "address": "0xA123", "returnValues": {"payer": "0x1234A", "borrower": "0x1234A", "repayAmount": "60", "accountBorrows": "2", "totalBorrows": "122"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 10}
+{"event": "Transfer", "address": "0x1A3B", "returnValues": {"from": "0x1234A", "to": "0xAB31", "amount": "55"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 11}
 {"event": "MarketExited", "address": "0xC2A1", "returnValues": {"cToken": "0x1A3B", "account": "0x1234A"}, "blockNumber": 123, "transactionIndex": 11, "logIndex": 2}
 {"event": "ReservesAdded", "address": "0x1A3B", "returnValues": {"benefactor": "0xAB31", "addAmount": "100", "newTotalReserves": "100"}, "blockNumber": 123, "transactionIndex": 11, "logIndex": 3}
 {"event": "ReservesReduced", "address": "0x1A3B", "returnValues": {"admin": "0xAB31", "reduceAmount": "80", "newTotalReserves": "20"}, "blockNumber": 123, "transactionIndex": 11, "logIndex": 4}

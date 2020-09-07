@@ -40,7 +40,7 @@ class CompoundProcessor(Processor):
 
         try:
             func(state, event["address"], event["returnValues"])
-        except AssertionError as e:
+        except Exception as e:
             logger.error("error while processing %s", event)
             raise e
 
@@ -134,8 +134,8 @@ class CompoundProcessor(Processor):
                             int(event_values["repayAmount"]))
 
     def process_liquidate_borrow(self, state: State, event_address: str, event_values: dict):
-        self._execute_repay(state, event_address, event_values["borrower"],
-                            int(event_values["repayAmount"]))
+        # NOTE: repay and transfer will be emitted with each liquidation
+        pass
 
     def process_reserves_added(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
@@ -165,7 +165,10 @@ class CompoundProcessor(Processor):
         oracle.update_price(event_values["asset"], value)
 
     def process_new_interest_params(self, state: State, event_address: str, event_values: dict):
-        model = state.interest_rate_models.get_model(event_address)
+        try:
+            model = state.interest_rate_models.get_model(event_address)
+        except KeyError:
+            model = state.interest_rate_models.create_model(event_address)
         model.update_params(event_values)
 
     def process_accrue_interest(self, state: State, event_address: str, event_values: dict):

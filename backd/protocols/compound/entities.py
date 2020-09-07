@@ -20,7 +20,9 @@ class InterestRateModels:
     def get_model(self, address: str) -> InterestRateModel:
         address = address.lower()
         if address not in self.interest_rate_models:
-            raise KeyError(f"no model found at address {address}")
+            available = ", ".join(self.interest_rate_models.keys())
+            raise KeyError(f"no model found at address {address}, "
+                           f"available: {available}")
         return self.interest_rate_models[address]
 
     def create_model(self, address: str):
@@ -30,6 +32,7 @@ class InterestRateModels:
         class_ = InterestRateModel.get(address)
         model = class_(dsr=self.dsr)
         self.interest_rate_models[address] = model
+        return model
 
 
 @dataclass
