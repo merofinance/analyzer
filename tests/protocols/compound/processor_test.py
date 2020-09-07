@@ -139,10 +139,13 @@ def test_borrow(processor: CompoundProcessor, state: State, compound_dummy_event
     assert user_balances.total_borrowed == 80
 
 def test_accrue_interest(processor: CompoundProcessor, state: State, compound_dummy_events):
+    market = state.markets.find_by_address(BORROW_MARKET)
+    market.reserve_factor = Decimal("0.1")
     accrue_interest_event = get_event(compound_dummy_events, "AccrueInterest")
     processor.process_event(state, accrue_interest_event)
     market = state.markets.find_by_address(BORROW_MARKET)
     assert market.borrow_index == 1033291579335879146
+    assert market.reserves == 100
 
 
 def test_repay_borrow(processor: CompoundProcessor, state: State, compound_dummy_events):

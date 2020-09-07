@@ -174,6 +174,7 @@ class CompoundProcessor(Processor):
     def process_accrue_interest(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
         market.borrow_index = int(event_values["borrowIndex"])
+        market.reserves += int(int(event_values["interestAccumulated"]) * market.reserve_factor)
 
     def update_user_borrow(self, market: Market, user_address: str):
         user = market.users[user_address]

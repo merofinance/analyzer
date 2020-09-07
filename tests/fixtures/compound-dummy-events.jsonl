@@ -11,7 +11,7 @@
 {"event": "Mint", "address": "0x1A3B", "returnValues": {"minter": "0x1234A", "mintAmount": "100", "mintTokens": "110"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 2}
 {"event": "Transfer", "address": "0x1A3B", "returnValues": {"from": "0x1A3B", "to": "0x1234A", "amount": "110"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 3}
 {"event": "Borrow", "address": "0xA123", "returnValues": {"borrower": "0x1234A", "borrowAmount": "80", "accountBorrows": "80", "totalBorrows": "200"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 4}
-{"event": "AccrueInterest", "address": "0xA123", "returnValues": {"borrowIndex": "1033291579335879146"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 5}
+{"event": "AccrueInterest", "address": "0xA123", "returnValues": {"borrowIndex": "1033291579335879146", "interestAccumulated": "1000"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 5}
 {"event": "RepayBorrow", "address": "0xA123", "returnValues": {"payer": "0xabcd", "borrower": "0x1234A", "repayAmount": "20", "accountBorrows": "60", "totalBorrows": "180"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 6}
 {"event": "Redeem", "address": "0x1A3B", "returnValues": {"redeemer": "0x1234A", "redeemAmount": "40", "redeemTokens": "45"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 7}
 {"event": "Transfer", "address": "0x1A3B", "returnValues": {"from": "0x1234A", "to": "0x1A3B", "amount": "45"}, "blockNumber": 123, "transactionIndex": 10, "logIndex": 8}
