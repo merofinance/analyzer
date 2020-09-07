@@ -1,6 +1,6 @@
 import pytest
 
-from backd.entities import PointInTime, Market, Markets, Oracles, Oracle
+from backd.entities import PointInTime, Market, Markets, Oracles, Oracle, MarketUser, UserBalances
 
 
 def test_point_in_time_from_event(compound_redeem_event):
@@ -8,6 +8,11 @@ def test_point_in_time_from_event(compound_redeem_event):
     assert point_in_time.block_number == 10590848
     assert point_in_time.transaction_index == 114
     assert point_in_time.log_index == 110
+
+
+def test_user_borrowed_at():
+    user = MarketUser(balances=UserBalances(total_borrowed=100))
+    assert user.borrowed_at(int(11e17)) == 110
 
 
 def test_markets_find_market_by_address(markets: Markets):

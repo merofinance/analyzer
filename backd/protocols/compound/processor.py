@@ -186,7 +186,7 @@ class CompoundProcessor(Processor):
 
     def update_user_borrow(self, market: Market, user_address: str):
         user = market.users[user_address]
-        new_total_borrowed = user.balances.total_borrowed * market.borrow_index // user.borrow_index
+        new_total_borrowed = user.borrowed_at(market.borrow_index)
         market.balances.total_borrowed += new_total_borrowed - user.balances.total_borrowed
         user.balances.total_borrowed = new_total_borrowed
         user.borrow_index = market.borrow_index

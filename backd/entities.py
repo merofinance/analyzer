@@ -40,6 +40,9 @@ class MarketUser:
         if self.balances is None:
             self.balances = UserBalances()
 
+    def borrowed_at(self, market_index: int) -> int:
+        return self.balances.total_borrowed * market_index // self.borrow_index
+
 
 @dataclass(eq=False, repr=False)
 class Market:
@@ -130,7 +133,6 @@ class Oracles:
 
     def __len__(self):
         return len(self.oracles)
-
 
 
 @dataclass
