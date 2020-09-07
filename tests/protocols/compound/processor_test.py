@@ -128,10 +128,11 @@ def test_mint(processor: CompoundProcessor, state: State, compound_dummy_events)
 
 def test_borrow(processor: CompoundProcessor, state: State, compound_dummy_events):
     borrow_event = get_event(compound_dummy_events, "Borrow")
-    processor.process_event(state, borrow_event)
+    mint_event = get_event(compound_dummy_events, "Mint", 1)
     market = state.markets.find_by_address(BORROW_MARKET)
-    assert market.balances.total_supplied == 0
-    assert market.balances.token_balance == 0
+    processor.process_events(state, [mint_event, borrow_event])
+    assert market.balances.total_supplied == 120
+    assert market.balances.token_balance == 250
     assert market.balances.total_borrowed == 80
 
     user_balances = market.users[MAIN_USER].balances
@@ -153,12 +154,13 @@ def test_repay_borrow(processor: CompoundProcessor, state: State, compound_dummy
     with pytest.raises(AssertionError):
         processor.process_event(state, repay_borrow_event)
 
+    mint_event = get_event(compound_dummy_events, "Mint", 1)
     borrow_event = get_event(compound_dummy_events, "Borrow")
-    processor.process_events(state, [borrow_event, repay_borrow_event])
+    processor.process_events(state, [mint_event, borrow_event, repay_borrow_event])
 
     market = state.markets.find_by_address(BORROW_MARKET)
-    assert market.balances.total_supplied == 0
-    assert market.balances.token_balance == 0
+    assert market.balances.total_supplied == 140
+    assert market.balances.token_balance == 250
     assert market.balances.total_borrowed == 60
 
     user_balances = market.users[MAIN_USER].balances
@@ -200,23 +202,23 @@ def test_transfer(processor: CompoundProcessor, state: State, compound_dummy_eve
 def test_liquidate_borrow(processor: CompoundProcessor, state: State, compound_dummy_events):
     # get liquidation and next repay
     events = get_events_until(compound_dummy_events, "RepayBorrow", 1)
-    processor.process_events(state, events)
-    collateral_market = state.markets.find_by_address(MAIN_MARKET)
     borrow_market = state.markets.find_by_address(BORROW_MARKET)
+    collateral_market = state.markets.find_by_address(MAIN_MARKET)
+    processor.process_events(state, events)
 
-    interets = 80 * 1033291579335879146 // int(1e18) - 80
+    interests = 80 * 1033291579335879146 // int(1e18) - 80
 
     assert collateral_market.balances.token_balance == 65
     assert collateral_market.balances.total_supplied == 60
     assert collateral_market.balances.total_borrowed == 0
-    assert borrow_market.balances.total_supplied == 0
-    assert borrow_market.balances.token_balance == 0
-    assert borrow_market.balances.total_borrowed == interets
+    assert borrow_market.balances.total_supplied == 200 # fully repaid
+    assert borrow_market.balances.token_balance == 250
+    assert borrow_market.balances.total_borrowed == interests
 
     collateral_user_balances = collateral_market.users[MAIN_USER].balances
     borrow_user_balances = borrow_market.users[MAIN_USER].balances
     assert collateral_user_balances.token_balance == 65
-    assert borrow_user_balances.total_borrowed == interets
+    assert borrow_user_balances.total_borrowed == interests
 
 
 def test_reserves_added(processor: CompoundProcessor, state: State, compound_dummy_events):

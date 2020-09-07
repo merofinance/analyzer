@@ -123,15 +123,30 @@ class CompoundProcessor(Processor):
 
     def process_borrow(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
-        market.balances.total_borrowed += int(event_values["borrowAmount"])
+        amount = int(event_values["borrowAmount"])
+        market.balances.total_borrowed += amount
+        assert market.balances.total_supplied >= amount, \
+                f"total supplied can never be negative, {market.balances.total_supplied} < {amount}"
+        market.balances.total_supplied -= amount
 
         borrower = event_values["borrower"]
         self.update_user_borrow(market, borrower)
         market.users[borrower].balances.total_borrowed += int(event_values["borrowAmount"])
 
     def process_repay_borrow(self, state: State, event_address: str, event_values: dict):
-        self._execute_repay(state, event_address, event_values["borrower"],
-                            int(event_values["repayAmount"]))
+        borrower = event_values["borrower"]
+        amount = int(event_values["repayAmount"])
+        market = state.markets.find_by_address(event_address)
+        self.update_user_borrow(market, borrower)
+        user_balances = market.users[borrower].balances
+        assert market.balances.total_borrowed >= amount, \
+                f"borrow can never be negative, {market.balances.total_borrowed} < {amount}"
+        assert user_balances.total_borrowed >= amount, \
+                f"borrow can never be negative, {user_balances.total_borrowed} < {amount}"
+
+        market.balances.total_borrowed -= amount
+        market.balances.total_supplied += amount
+        user_balances.total_borrowed -= amount
 
     def process_liquidate_borrow(self, state: State, event_address: str, event_values: dict):
         # NOTE: repay and transfer will be emitted with each liquidation
@@ -146,18 +161,6 @@ class CompoundProcessor(Processor):
         assert market.reserves >= int(event_values["reduceAmount"]), \
             f"reserves can never be negative, {market.reserves} < {event_values['reduceAmount']}"
         market.reserves -= int(event_values["reduceAmount"])
-
-    def _execute_repay(self, state: State, event_address: str, borrower: str, amount: int):
-        market = state.markets.find_by_address(event_address)
-        self.update_user_borrow(market, borrower)
-        user_balances = market.users[borrower].balances
-        assert market.balances.total_borrowed >= amount, \
-                f"borrow can never be negative, {market.balances.total_borrowed} < {amount}"
-        assert user_balances.total_borrowed >= amount, \
-                f"borrow can never be negative, {user_balances.total_borrowed} < {amount}"
-
-        market.balances.total_borrowed -= amount
-        user_balances.total_borrowed -= amount
 
     def process_price_posted(self, state: State, event_address: str, event_values: dict):
         oracle = state.oracles.get_oracle(event_address)

@@ -11,6 +11,7 @@ from scripts.store_dsr import import_dsr_data # pylint: disable=wrong-import-pos
 
 FIXTURES_PATH = path.join(settings.PROJECT_ROOT, "tests", "fixtures")
 
+db.command("dropDatabase")
 import_dsr_data(path.join(settings.PROJECT_ROOT, "data", "dsr-rates.json"), "dsr")
 
 with open(path.join(FIXTURES_PATH, "compound-dummy-events.jsonl")) as f:
