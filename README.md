@@ -8,6 +8,11 @@ cd backd
 pip install -e .
 ```
 
+## Data
+
+The required data can be downloaded from:
+https://www.dropbox.com/sh/i5v1orfxg2la7f6/AACNX9078VnONF02lIWwZjbJa?dl=0
+
 ## Setting up the database
 
 MongoDB needs to be running
