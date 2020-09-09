@@ -64,6 +64,11 @@ class Market:
         if self.users is None:
             self.users = defaultdict(MarketUser)
 
+    @property
+    def underlying_exchange_rate(self):
+        numerator = self.balances.total_supplied + self.balances.total_borrowed - self.reserves
+        return numerator * int(1e18) // self.balances.token_balance
+
     def __eq__(self, other):
         return self.address == other.address
 

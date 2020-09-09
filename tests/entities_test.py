@@ -1,6 +1,7 @@
 import pytest
 
-from backd.entities import PointInTime, Market, Markets, Oracles, Oracle, MarketUser, UserBalances
+from backd.entities import PointInTime, Market, Markets, Oracles, Oracle, MarketUser
+from backd.entities import Balances, UserBalances
 
 
 def test_point_in_time_from_event(compound_redeem_event):
@@ -34,6 +35,18 @@ def test_markets_add_market(markets: Markets):
     with pytest.raises(ValueError):
         markets.add_market(new_market)
     assert len(markets) == 4
+
+
+def test_market_underlying_exchange_rate():
+    # values take at block 10827297 from
+    # https://etherscan.io/token/0x5d3a536e4d6dbd6114cc1ead35777bab948e3643#readContract
+    balances = Balances(
+        total_supplied=126481409090838027046951927,
+        total_borrowed=523702215450739537804145681,
+        token_balance=3147635947303247595,
+    )
+    market = Market(address="0x", reserves=527492004048007051547203, balances=balances)
+    assert market.underlying_exchange_rate == 206394940016530694621454013
 
 
 def test_oracles_get_oracle():
