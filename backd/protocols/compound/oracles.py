@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from ... import constants
 from ...entities import Oracle
+from ...logger import logger
 
 
 MARKETS_BY_CTOKEN = {m["address"]: m for m in constants.COMPOUND_MARKETS}
@@ -11,12 +12,21 @@ MARKETS_BY_CTOKEN = {m["address"]: m for m in constants.COMPOUND_MARKETS}
 USDC_ORACLE_KEY = "0x0000000000000000000000000000000000000001"
 DAI_ORACLE_KEY  = "0x0000000000000000000000000000000000000002"
 
+ETH_BASE_UNIT = int(1e18)
+
 
 def is_token(ctoken: str, symbol: str) -> bool:
     ctoken = ctoken.lower()
     if ctoken not in MARKETS_BY_CTOKEN:
         return False
     return MARKETS_BY_CTOKEN[ctoken]["underlying_symbol"] == symbol
+
+
+def find_market(symbol: str) -> dict:
+    for market in MARKETS_BY_CTOKEN.values():
+        if market["underlying_symbol"] == symbol:
+            return market
+    raise ValueError(f"no such token: {symbol}")
 
 
 @Oracle.register("0x02557a5e05defeffd4cae6d83ea3d173b272c904")
@@ -55,7 +65,7 @@ class PriceOracleV1(Oracle):
 class PriceOracleV11(PriceOracleV1):
     def get_underlying_price(self, ctoken: str) -> int:
         if is_token(ctoken, "ETH"):
-            return int(1e18)
+            return ETH_BASE_UNIT
         return super().get_underlying_price(ctoken)
 
 
@@ -63,7 +73,7 @@ class PriceOracleV11(PriceOracleV1):
 class PriceOracleV12(PriceOracleV1):
     def get_underlying_price(self, ctoken: str) -> int:
         if is_token(ctoken, "ETH"):
-            return int(1e18)
+            return ETH_BASE_UNIT
         if is_token(ctoken, "USDC"):
             return super().get_price(USDC_ORACLE_KEY)
         return super().get_underlying_price(ctoken)
@@ -75,7 +85,7 @@ class PriceOracleV13(PriceOracleV1):
 
     def get_underlying_price(self, ctoken: str) -> int:
         if is_token(ctoken, "ETH"):
-            return int(1e18)
+            return ETH_BASE_UNIT
 
         if is_token(ctoken, "USDC"):
             return super().get_price(self.maker_usd_oracle_key) * int(1e12)
@@ -89,15 +99,15 @@ class PriceOracleV13(PriceOracleV1):
         maker_usd_price = super().get_price(self.maker_usd_oracle_key)
         posted_usdc_price = super().get_price(USDC_ORACLE_KEY)
         posted_scaled_dai_price = super().get_price(DAI_ORACLE_KEY) * int(1e12)
-        dai_usdc_ratio = posted_scaled_dai_price * int(1e18) // posted_usdc_price
+        dai_usdc_ratio = posted_scaled_dai_price * ETH_BASE_UNIT // posted_usdc_price
 
         lower_bound = int(0.95e18)
         upper_bound = int(1.05e18)
         if dai_usdc_ratio < lower_bound:
-            return maker_usd_price * lower_bound // int(1e18)
+            return maker_usd_price * lower_bound // ETH_BASE_UNIT
         if dai_usdc_ratio > upper_bound:
-            return maker_usd_price * upper_bound // int(1e18)
-        return maker_usd_price * dai_usdc_ratio // int(1e18)
+            return maker_usd_price * upper_bound // ETH_BASE_UNIT
+        return maker_usd_price * dai_usdc_ratio // ETH_BASE_UNIT
 
 
 @Oracle.register("0x1d8aedc9e924730dd3f9641cdb4d1b92b848b4bd")
@@ -148,7 +158,7 @@ class PriceSource(Enum):
 
 @dataclass
 class TokenConfig:
-    c_token: str
+    ctoken: str
     underlying: str
     symbol_hash: str
     base_unit: int
@@ -161,10 +171,10 @@ class TokenConfig:
 @Oracle.register("0x9b8eb8b3d6e2e0db36f41455185fef7049a35cae")
 class UniswapAnchorView(Oracle):
     CDAI_CONFIG = TokenConfig(
-        c_token="0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
+        ctoken="0x5d3a536e4d6dbd6114cc1ead35777bab948e3643",
         underlying="0x6b175474e89094c44da98b954eedeac495271d0f",
         symbol_hash="a5e92f3efb6826155f1f728e162af9d7cda33a574a1153b58f03ea01cc37e568",
-        base_unit=int(1e18),
+        base_unit=ETH_BASE_UNIT,
         price_source=PriceSource.REPORTER,
         fixed_price=0,
         uniswap_market="0xa478c2975ab1ea89e8196811f51a7b7ade33eb11",
@@ -172,10 +182,10 @@ class UniswapAnchorView(Oracle):
     )
 
     CETH_CONFIG = TokenConfig(
-        c_token="0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5",
+        ctoken="0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5",
         underlying="0x0000000000000000000000000000000000000000",
         symbol_hash="aaaebeba3810b1e6b70781f14b2d72c1cb89c0b2b320c43bb67ff79f562f5ff4",
-        base_unit=int(1e18),
+        base_unit=ETH_BASE_UNIT,
         price_source=PriceSource.REPORTER,
         fixed_price=0,
         uniswap_market="0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc",
@@ -183,10 +193,10 @@ class UniswapAnchorView(Oracle):
     )
 
     CBAT_CONFIG = TokenConfig(
-        c_token="0x6c8c6b02e7b2be14d4fa6022dfd6d75921d90e4e",
+        ctoken="0x6c8c6b02e7b2be14d4fa6022dfd6d75921d90e4e",
         underlying="0x0d8775f648430679a709e98d2b0cb6250d2887ef",
         symbol_hash="3ec6762bdf44eb044276fec7d12c1bb640cb139cfd533f93eeebba5414f5db55",
-        base_unit=int(1e18),
+        base_unit=ETH_BASE_UNIT,
         price_source=PriceSource.REPORTER,
         fixed_price=0,
         uniswap_market="0xb6909b960dbbe7392d405429eb2b3649752b4838",
@@ -194,10 +204,10 @@ class UniswapAnchorView(Oracle):
     )
 
     CSAI_CONFIG = TokenConfig(
-        c_token="0xf5dce57282a584d2746faf1593d3121fcac444dc",
+        ctoken="0xf5dce57282a584d2746faf1593d3121fcac444dc",
         underlying="0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359",
         symbol_hash="4dcbfd8d7239a822743634e138b90febafc5720cec2dbdc6a0e5a2118ba2c532",
-        base_unit=int(1e18),
+        base_unit=ETH_BASE_UNIT,
         price_source=PriceSource.FIXED_ETH,
         fixed_price=5285000000000000,
         uniswap_market="0x0000000000000000000000000000000000000000",
@@ -205,10 +215,10 @@ class UniswapAnchorView(Oracle):
     )
 
     CREP_CONFIG = TokenConfig(
-        c_token="0x158079ee67fce2f58472a96584a73c7ab9ac95c1",
+        ctoken="0x158079ee67fce2f58472a96584a73c7ab9ac95c1",
         underlying="0x1985365e9f78359a9b6ad760e32412f4a445e862",
         symbol_hash="91a08135082b0a28b4ad8ecc7749a009e0408743a9d1cdf34dd6a58d60ee9504",
-        base_unit=int(1e18),
+        base_unit=ETH_BASE_UNIT,
         price_source=PriceSource.REPORTER,
         fixed_price=0,
         uniswap_market="0xec2d2240d02a8cf63c3fa0b7d2c5a3169a319496",
@@ -216,7 +226,7 @@ class UniswapAnchorView(Oracle):
     )
 
     CUSDC_CONFIG = TokenConfig(
-        c_token="0x39aa39c021dfbae8fac545936693ac917d5e7563",
+        ctoken="0x39aa39c021dfbae8fac545936693ac917d5e7563",
         underlying="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         symbol_hash="d6aca1be9729c13d677335161321649cccae6a591554772516700f986f942eaa",
         base_unit=1_000_000,
@@ -227,7 +237,7 @@ class UniswapAnchorView(Oracle):
     )
 
     CUSDT_CONFIG = TokenConfig(
-        c_token="0xf650c3d88d12db855b8bf7d11be6c55a4e07dcc9",
+        ctoken="0xf650c3d88d12db855b8bf7d11be6c55a4e07dcc9",
         underlying="0xdac17f958d2ee523a2206206994597c13d831ec7",
         symbol_hash="8b1a1d9c2b109e527c9134b25b1a1833b16b6594f92daa9f6d9b7a6024bce9d0",
         base_unit=1_000_000,
@@ -238,7 +248,7 @@ class UniswapAnchorView(Oracle):
     )
 
     CWBTC_CONFIG = TokenConfig(
-        c_token="0xc11b1268c1a384e55c48c2391d8d480264a3a7f4",
+        ctoken="0xc11b1268c1a384e55c48c2391d8d480264a3a7f4",
         underlying="0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
         symbol_hash="e98e2830be1a7e4156d656a7505e65d08c67660dc618072422e9c78053c261e9",
         base_unit=100000000,
@@ -249,17 +259,18 @@ class UniswapAnchorView(Oracle):
     )
 
     CZRX_CONFIG = TokenConfig(
-        c_token="0xb3319f5d18bc0d84dd1b4825dcde5d5f7266d407",
+        ctoken="0xb3319f5d18bc0d84dd1b4825dcde5d5f7266d407",
         underlying="0xe41d2489571d322189246dafa5ebde1f4699f498",
         symbol_hash="b8612e326dd19fc983e73ae3bc23fa1c78a3e01478574fa7ceb5b57e589dcebd",
-        base_unit=1e+18,
-        price_source=2,
+        base_unit=ETH_BASE_UNIT,
+        price_source=PriceSource.REPORTER,
         fixed_price=0,
         uniswap_market="0xc6f348dd3b91a56d117ec0071c1e9b83c0996de4",
         is_uniswap_reversed=True,
     )
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.token_configs = [
             self.CBAT_CONFIG,
             self.CDAI_CONFIG,
@@ -271,3 +282,34 @@ class UniswapAnchorView(Oracle):
             self.CWBTC_CONFIG,
             self.CZRX_CONFIG,
         ]
+        self._config_by_ctoken = {c.ctoken: c for c in self.token_configs}
+        self._token_to_underlying = {m["underlying_symbol"]: m["underlying_address"]
+                                     for m in constants.COMPOUND_MARKETS}
+
+    def get_underlying_price(self, ctoken: str) -> int:
+        # Comptroller needs prices in the format: ${raw price} * 1e(36 - baseUnit)
+        # Since the prices in this view have 6 decimals, we must scale them by 1e(36 - 6 - baseUnit)
+        config = self._config_by_ctoken.get(ctoken)
+        if not config:
+            return 0
+        return 10 ** 30 * self._get_price(config) // config.base_unit
+
+    def _get_price(self, config: TokenConfig) -> int:
+        if config.price_source == PriceSource.REPORTER:
+            return self.get_price(config.underlying)
+        if config.price_source == PriceSource.FIXED_USD:
+            return config.fixed_price
+
+        # if config.price_source == PriceSource.FIXED_ETH:
+        usd_per_eth = self.get_price(constants.ETH_ADDRESS)
+        if usd_per_eth == 0:
+            raise ValueError("ETH price not set, cannot convert to dollars")
+        return usd_per_eth * config.fixed_price / ETH_BASE_UNIT
+
+    def update_price(self, token: str, price: int):
+        if not token.startswith("0x"):
+            token = self._token_to_underlying.get(token)
+            if not token:
+                logger.warning("no such symbol %s", token)
+                return
+        return super().update_price(token, price)

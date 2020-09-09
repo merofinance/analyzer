@@ -95,6 +95,15 @@ def test_price_oracle_v16():
         mock_method.assert_called_once_with(ctoken_address("DAI"))
 
 
+def test_uniswap_anchor_view():
+    oracle = oracles.UniswapAnchorView(Markets())
+    oracle.update_price("ETH", 100)
+    assert oracle.get_underlying_price(ctoken_address("ETH")) == int(100e12)
+    assert oracle.get_underlying_price(ctoken_address("USDT")) == 10 ** 30
+    assert oracle.get_underlying_price(ctoken_address("USDC")) == 10 ** 30
+    assert oracle.get_underlying_price(ctoken_address("SAI")) == 100 * 5285000000000000 // int(1e6) # eth_price * fixed_price * 10 ** (30 - 18 - 18)
+
+
 def ctoken_address(symbol: str) -> str:
     return find_market(symbol)["address"]
 
