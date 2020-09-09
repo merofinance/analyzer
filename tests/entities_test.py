@@ -50,16 +50,19 @@ def test_market_underlying_exchange_rate():
 
 
 def test_oracles_get_oracle():
-    oracles = Oracles()
+    oracles = Oracles(Markets())
     assert len(oracles) == 0
-    oracle = oracles.get_oracle("0x1234")
+    oracle = oracles.get_oracle("0xab23")
     assert isinstance(oracle, Oracle)
     assert len(oracles) == 1
+
+    with pytest.raises(ValueError):
+        oracles.get_oracle("0x12341234") # address must exist
 
 
 def test_oracle_get_price():
     asset = "0x1abc"
-    oracle = Oracle()
+    oracle = Oracle(Markets())
     assert oracle.get_price(asset) == 0
     oracle.update_price(asset, 100)
     assert oracle.get_price(asset) == 100

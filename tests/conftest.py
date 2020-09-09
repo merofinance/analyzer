@@ -9,7 +9,7 @@ import pytest
 from backd import settings
 from backd import constants
 from backd.protocols.compound.interest_rate_models import InterestRateModel, JumpRateModel
-from backd.entities import Market, Balances, Markets
+from backd.entities import Market, Balances, Markets, Oracle
 from backd.tokens.dai.dsr import DSR
 
 
@@ -72,4 +72,8 @@ def get_events_until(compound_dummy_events, name, index=0):
 
 @InterestRateModel.register("0xbae0")
 class DummyInterestRateModel(JumpRateModel):
+    pass
+
+@Oracle.register("0xab23")
+class DummyOracle(Oracle):
     pass

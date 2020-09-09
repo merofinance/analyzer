@@ -3,6 +3,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
 
+from .base_factory import BaseFactory
+
 
 @dataclass
 class PointInTime:
@@ -108,7 +110,8 @@ class Markets:
 
 
 @dataclass
-class Oracle:
+class Oracle(BaseFactory):
+    markets: Markets
     prices: Dict[str, int] = None
 
     def __post_init__(self):
@@ -124,6 +127,7 @@ class Oracle:
 
 @dataclass
 class Oracles:
+    markets: Markets
     oracles: Dict[str, Oracle] = None
 
     def __post_init__(self):
@@ -133,7 +137,9 @@ class Oracles:
     def get_oracle(self, oracle_address: str):
         oracle_address = oracle_address.lower()
         if oracle_address not in self.oracles:
-            self.oracles[oracle_address] = Oracle()
+            oracle_class = Oracle.get(oracle_address)
+            oracle = oracle_class(self.markets)
+            self.oracles[oracle_address] = oracle
         return self.oracles[oracle_address]
 
     def __len__(self):
@@ -152,4 +158,7 @@ class State:
         if self.markets is None:
             self.markets = Markets()
         if self.oracles is None:
-            self.oracles = Oracles()
+            self.oracles = Oracles(self.markets)
+
+    def compute_user_position(self, user: str) -> (int, int):
+        pass

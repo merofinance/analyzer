@@ -32,6 +32,8 @@ class BaseFactory:
         :param name: name with which the entity should be accessed
         """
         def wrapper(klass):
+            if name in cls._entities:
+                raise ValueError(f"{name} already registered")
             cls._entities[name] = klass
             klass.__registered_name__ = name
             return klass
