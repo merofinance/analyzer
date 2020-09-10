@@ -6,7 +6,7 @@ from decimal import Decimal
 from .base_factory import BaseFactory
 
 
-@dataclass
+@dataclass(order=True)
 class PointInTime:
     block_number: int
     transaction_index: int
@@ -118,7 +118,9 @@ class Oracle(BaseFactory):
         if self.prices is None:
             self.prices = {}
 
-    def update_price(self, token: str, price: int):
+    def update_price(self, token: str, price: int, inverted: bool = False):
+        if inverted and price > 0:
+            price = 10 ** 36 // price
         self.prices[token.lower()] = price
 
     def get_price(self, token: str) -> int:
@@ -129,21 +131,29 @@ class Oracle(BaseFactory):
 class Oracles:
     markets: Markets
     oracles: Dict[str, Oracle] = None
+    current_address: str = None
 
     def __post_init__(self):
         if self.oracles is None:
             self.oracles = {}
 
-    def get_oracle(self, oracle_address: str):
+    def get_oracle(self, oracle_address: str) -> Oracle:
         oracle_address = oracle_address.lower()
         if oracle_address not in self.oracles:
-            oracle_class = Oracle.get(oracle_address)
-            oracle = oracle_class(self.markets)
-            self.oracles[oracle_address] = oracle
+            self.create_oracle(oracle_address)
         return self.oracles[oracle_address]
+
+    def create_oracle(self, oracle_address: str):
+        oracle_class = Oracle.get(oracle_address)
+        oracle = oracle_class(self.markets)
+        self.oracles[oracle_address] = oracle
 
     def __len__(self):
         return len(self.oracles)
+
+    @property
+    def current(self):
+        return self.oracles[self.current_address]
 
 
 @dataclass

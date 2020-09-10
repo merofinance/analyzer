@@ -69,7 +69,7 @@ class PriceOracleV11(PriceOracleV1):
         return super().get_underlying_price(ctoken)
 
 
-@Oracle.register("0xe7664229833AE4Abf4E269b8F23a86B657E2338D")
+@Oracle.register("0xe7664229833ae4abf4e269b8f23a86b657e2338d")
 class PriceOracleV12(PriceOracleV1):
     def get_underlying_price(self, ctoken: str) -> int:
         if is_token(ctoken, "ETH"):
@@ -306,10 +306,10 @@ class UniswapAnchorView(Oracle):
             raise ValueError("ETH price not set, cannot convert to dollars")
         return usd_per_eth * config.fixed_price / ETH_BASE_UNIT
 
-    def update_price(self, token: str, price: int):
+    def update_price(self, token: str, price: int, inverted: bool = False):
         if not token.startswith("0x"):
             token = self._token_to_underlying.get(token)
             if not token:
                 logger.warning("no such symbol %s", token)
                 return
-        return super().update_price(token, price)
+        super().update_price(token, price, inverted=inverted)

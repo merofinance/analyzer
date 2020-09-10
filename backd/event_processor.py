@@ -30,7 +30,3 @@ class Processor(ABC, BaseFactory):
     @abstractmethod
     def _process_event(self, state: State, event: dict):
         pass
-
-    @abstractmethod
-    def create_empty_state(self) -> State:
-        pass

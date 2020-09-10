@@ -167,10 +167,21 @@ class CompoundProcessor(Processor):
             f"reserves can never be negative, {market.reserves} < {event_values['reduceAmount']}"
         market.reserves -= int(event_values["reduceAmount"])
 
+    def process_new_price_oracle(self, state: State, _event_address: str, event_values: dict):
+        address = event_values["newPriceOracle"]
+        state.oracles.create_oracle(address)
+        state.oracles.current_address = address
+
     def process_price_posted(self, state: State, event_address: str, event_values: dict):
         oracle = state.oracles.get_oracle(event_address)
         value = int(event_values["newPriceMantissa"])
         oracle.update_price(event_values["asset"], value)
+
+    def process_inverted_price_posted(self, state: State, event_address: str, event_values: dict):
+        # virtual event generated when Oracle DSValue is updated
+        oracle = state.oracles.current
+        value = int(event_values["newPriceMantissa"])
+        oracle.update_price(event_address, value, inverted=True)
 
     def process_new_interest_params(self, state: State, event_address: str, event_values: dict):
         try:

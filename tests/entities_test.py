@@ -11,6 +11,12 @@ def test_point_in_time_from_event(compound_redeem_event):
     assert point_in_time.log_index == 110
 
 
+def test_point_in_time_order():
+    assert PointInTime(1, 2, 3) < PointInTime(2, 0, 0)
+    assert PointInTime(1, 2, 3) < PointInTime(1, 3, 1)
+    assert PointInTime(1, 2, 1) < PointInTime(1, 2, 3)
+
+
 def test_user_borrowed_at():
     user = MarketUser(balances=UserBalances(total_borrowed=100))
     assert user.borrowed_at(int(11e17)) == 110
@@ -66,3 +72,12 @@ def test_oracle_get_price():
     assert oracle.get_price(asset) == 0
     oracle.update_price(asset, 100)
     assert oracle.get_price(asset) == 100
+
+
+def test_oracle_update_price():
+    asset = "0x1abc"
+    oracle = Oracle(Markets())
+    oracle.update_price(asset, 100)
+    assert oracle.get_price(asset) == 100
+    oracle.update_price(asset, int(2e18), inverted=True) # 2
+    assert oracle.get_price(asset) == int(5e17) # 0.5

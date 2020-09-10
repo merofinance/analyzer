@@ -25,6 +25,9 @@ def create_indices():
 
     db.dsr.create_index("block", unique=True)
 
+    db.ds_values.create_index("block", unique=True)
+    db.ds_values.create_index("address")
+
 
 def iterate_events():
     return db.events.find().sort(SORT_KEY)
