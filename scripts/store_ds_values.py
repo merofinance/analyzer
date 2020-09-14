@@ -30,7 +30,7 @@ def import_ds_values(input_file, address, collection):
             if price != current_price:
                 current_price = price
                 collection.insert_one({
-                    "block": parsed["block"],
+                    "blockNumber": parsed["block"],
                     "price": Decimal128(Decimal(int(current_price, 16))),
                     "address": address,
                 })

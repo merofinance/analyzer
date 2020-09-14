@@ -17,9 +17,9 @@ class Protocol(ABC, BaseFactory):
         pass
 
     @abstractmethod
-    def count_events(self) -> int:
+    def count_events(self, max_block: int = None) -> int:
         pass
 
     @abstractmethod
-    def iterate_events(self) -> Iterable[dict]:
+    def iterate_events(self, max_block: int = None) -> Iterable[dict]:
         pass
