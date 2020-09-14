@@ -35,4 +35,4 @@ jobs:
         run: python scripts/import_test_data.py
 
       - name: Run tests
-        run: pytest
+        run: pytest tests/unit

@@ -9,6 +9,7 @@ import pytest
 from backd import settings
 from backd import constants
 from backd.protocols.compound.interest_rate_models import InterestRateModel, JumpRateModel
+from backd.protocols.compound.oracles import UniswapAnchorView
 from backd.entities import Market, Balances, Markets, Oracle
 from backd.tokens.dai.dsr import DSR
 
@@ -76,4 +77,9 @@ class DummyInterestRateModel(JumpRateModel):
 
 @Oracle.register("0xab23")
 class DummyOracle(Oracle):
+    pass
+
+
+@Oracle.register("0xabab54")
+class DummyUniswapOracle(UniswapAnchorView):
     pass

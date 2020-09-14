@@ -16,6 +16,7 @@ setup(
             "ipython",
             "jupyter",
             "pytest",
+            "web3",
         ]
     },
     entry_points = {

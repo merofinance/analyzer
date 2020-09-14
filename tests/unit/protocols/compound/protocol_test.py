@@ -22,18 +22,25 @@ def test_count_events(protocol: CompoundProtocol, compound_dummy_events):
     assert protocol.count_events() == len(compound_dummy_events)
 
     max_block = 123
-    expected = count_events(compound_dummy_events, max_block)
+    expected = count_events(compound_dummy_events, 0, max_block)
     assert protocol.count_events(max_block=max_block) == expected
+
+    min_block = 123
+    expected = count_events(compound_dummy_events,
+                            min_block=min_block, max_block=max_block)
+    assert protocol.count_events(
+        min_block=max_block, max_block=max_block) == expected
 
 
 def test_iterate_events(protocol: CompoundProtocol, compound_dummy_events):
     events = list(protocol.iterate_events())
-    assert len(events) == len(compound_dummy_events)
+    # all "regular" events and the SaiPriceSet
+    assert len(events) == len(compound_dummy_events) + 1
     assert all(get_timestamp(events[i]) <= get_timestamp(
         events[i + 1]) for i in range(len(events) - 1))
 
     max_block = 123
-    expected = count_events(compound_dummy_events, max_block)
+    expected = count_events(compound_dummy_events, 0, max_block)
     events = list(protocol.iterate_events(max_block=max_block))
     assert len(events) == expected
 
@@ -41,8 +48,8 @@ def test_iterate_events(protocol: CompoundProtocol, compound_dummy_events):
         events[i + 1]) for i in range(len(events) - 1))
 
 
-def count_events(compound_dummy_events, max_block):
-    return sum(1 for event in compound_dummy_events if event["blockNumber"] <= max_block)
+def count_events(compound_dummy_events, min_block, max_block):
+    return sum(1 for event in compound_dummy_events if min_block <= event["blockNumber"] <= max_block)
 
 
 def get_timestamp(event):

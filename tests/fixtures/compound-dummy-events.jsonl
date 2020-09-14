@@ -1,4 +1,5 @@
-{"event": "PricePosted", "address": "0xAB23", "returnValues": {"asset": "0x1A3B", "previousPriceMantissa": 100, "requestedPriceMantissa": 200, "newPriceMantissa": 200}, "blockNumber": 122, "transactionIndex": 2, "logIndex": 1}
+{"event": "PricePosted", "address": "0xAB23", "returnValues": {"asset": "0x1A3B", "previousPriceMantissa": "100", "requestedPriceMantissa": "200", "newPriceMantissa": "200"}, "blockNumber": 122, "transactionIndex": 2, "logIndex": 1}
+{"event": "PriceUpdated", "address": "0xabab54", "returnValues": {"symbol": "ETH", "price": "100"}, "blockNumber": 122, "transactionIndex": 2, "logIndex": 2}
 {"event": "NewComptroller", "address": "0x1A3B", "returnValues": {"oldComptroller": "0x0000", "newComptroller": "0xC2A1"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 1}
 {"event": "NewComptroller", "address": "0xA123", "returnValues": {"oldComptroller": "0x0000", "newComptroller": "0xC2A1"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 2}
 {"event": "NewMarketInterestRateModel", "address": "0x1A3B", "returnValues": {"oldInterestRateModel": "0x0000", "newInterestRateModel": "0xBAE0"}, "blockNumber": 123, "transactionIndex": 9, "logIndex": 3}

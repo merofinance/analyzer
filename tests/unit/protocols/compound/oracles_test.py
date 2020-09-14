@@ -6,10 +6,13 @@ from backd.constants import COMPOUND_MARKETS
 
 
 def test_is_token():
-    assert oracles.is_token("0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5", "ETH")
-    assert oracles.is_token("0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5", "ETH")
+    assert oracles.is_token(
+        "0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5", "ETH")
+    assert oracles.is_token(
+        "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5", "ETH")
 
-    assert not oracles.is_token("0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5", "USDC")
+    assert not oracles.is_token(
+        "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5", "USDC")
 
     assert not oracles.is_token("0x01234", "ETH")
 
@@ -22,6 +25,7 @@ def test_price_oracle_v1():
     # should be shared between instances
     oracle = oracles.PriceOracleV1(Markets())
     assert oracle.get_price("0x1234") == 1
+
 
 def test_price_oracle_v1_underlying_price():
     sample_market = COMPOUND_MARKETS[0]
@@ -64,7 +68,8 @@ def test_price_oracle_v13():
     oracle.update_price(oracle.maker_usd_oracle_key, 6505757595471992)
     oracle.update_price(oracles.USDC_ORACLE_KEY, 6543771170404755000000000000)
     oracle.update_price(oracles.DAI_ORACLE_KEY, 6509366069108860)
-    assert oracle.get_underlying_price(ctoken_address("SAI")) == 6471552357658807
+    assert oracle.get_underlying_price(
+        ctoken_address("SAI")) == 6471552357658807
 
 
 def test_price_oracle_v14():
@@ -73,8 +78,10 @@ def test_price_oracle_v14():
     oracle.update_price(oracle.maker_usd_oracle_key, 6505757595471992)
     oracle.update_price(oracles.USDC_ORACLE_KEY, 6543771170404755000000000000)
     oracle.update_price(oracles.DAI_ORACLE_KEY, 6509366069108860)
-    assert oracle.get_underlying_price(ctoken_address("SAI")) == 6471552357658807
-    assert oracle.get_underlying_price(ctoken_address("DAI")) == 6471552357658807
+    assert oracle.get_underlying_price(
+        ctoken_address("SAI")) == 6471552357658807
+    assert oracle.get_underlying_price(
+        ctoken_address("DAI")) == 6471552357658807
 
 
 def test_price_oracle_v15():
@@ -94,14 +101,25 @@ def test_price_oracle_v16():
         assert oracle.get_underlying_price(ctoken_address("DAI")) == 10
         mock_method.assert_called_once_with(ctoken_address("DAI"))
 
+    assert oracle.sai_price == 0
+    oracle.sai_price = 100
+    assert oracle.sai_price == 100
+
+    oracle = oracles.PriceOracleV16(Markets())
+    assert oracle.sai_price == 100
+    parent_oracle = oracles.PriceOracleV15(Markets())
+    assert parent_oracle.sai_price == 0
+
 
 def test_uniswap_anchor_view():
     oracle = oracles.UniswapAnchorView(Markets())
-    oracle.update_price("ETH", 100)
-    assert oracle.get_underlying_price(ctoken_address("ETH")) == int(100e12)
+    oracle.update_price("ETH", int(1e19))
+    assert oracle.get_underlying_price(ctoken_address("ETH")) == 10 ** 31
     assert oracle.get_underlying_price(ctoken_address("USDT")) == 10 ** 30
     assert oracle.get_underlying_price(ctoken_address("USDC")) == 10 ** 30
-    assert oracle.get_underlying_price(ctoken_address("SAI")) == 100 * 5285000000000000 // int(1e6) # eth_price * fixed_price * 10 ** (30 - 18 - 18)
+    # eth_price * fixed_price * 10 ** (30 - 18 - 18)
+    assert oracle.get_underlying_price(ctoken_address(
+        "SAI")) == int(1e19) * 5285000000000000 // int(1e6)
 
 
 def ctoken_address(symbol: str) -> str:

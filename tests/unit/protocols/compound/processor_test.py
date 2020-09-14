@@ -44,7 +44,8 @@ def test_new_comptroller(processor: CompoundProcessor, dsr, compound_dummy_event
 
 
 def test_new_interest_rate_model(processor: CompoundProcessor, dsr, compound_dummy_events):
-    events = get_events_until(compound_dummy_events, "NewMarketInterestRateModel")
+    events = get_events_until(compound_dummy_events,
+                              "NewMarketInterestRateModel")
     state = State(dsr=dsr)
     processor.process_events(state, events)
     market = state.markets.find_by_address(MAIN_MARKET)
@@ -61,7 +62,7 @@ def test_new_interest_params(processor: CompoundProcessor, dsr, compound_dummy_e
     assert model.base_rate_per_block == 0
     assert model.multiplier_per_block == 23782343987
     assert model.kink == 800000000000000000
-    assert model.jump_multiplier_per_block  == 518455098934
+    assert model.jump_multiplier_per_block == 518455098934
 
 
 def test_new_reserve_factor(processor: CompoundProcessor, dsr, compound_dummy_events):
@@ -139,6 +140,7 @@ def test_borrow(processor: CompoundProcessor, state: State, compound_dummy_event
     assert user_balances.token_balance == 0
     assert user_balances.total_borrowed == 80
 
+
 def test_accrue_interest(processor: CompoundProcessor, state: State, compound_dummy_events):
     market = state.markets.find_by_address(BORROW_MARKET)
     market.reserve_factor = Decimal("0.1")
@@ -156,7 +158,8 @@ def test_repay_borrow(processor: CompoundProcessor, state: State, compound_dummy
 
     mint_event = get_event(compound_dummy_events, "Mint", 1)
     borrow_event = get_event(compound_dummy_events, "Borrow")
-    processor.process_events(state, [mint_event, borrow_event, repay_borrow_event])
+    processor.process_events(
+        state, [mint_event, borrow_event, repay_borrow_event])
 
     market = state.markets.find_by_address(BORROW_MARKET)
     assert market.balances.total_underlying == 140
@@ -229,12 +232,14 @@ def test_reserves_added(processor: CompoundProcessor, state: State, compound_dum
 
 
 def test_reserves_reduced(processor: CompoundProcessor, state: State, compound_dummy_events):
-    reserves_reduced_event = get_event(compound_dummy_events, "ReservesReduced")
+    reserves_reduced_event = get_event(
+        compound_dummy_events, "ReservesReduced")
     with pytest.raises(AssertionError):
         processor.process_event(state, reserves_reduced_event)
 
     reserves_added_event = get_event(compound_dummy_events, "ReservesAdded")
-    processor.process_events(state, [reserves_added_event, reserves_reduced_event])
+    processor.process_events(
+        state, [reserves_added_event, reserves_reduced_event])
     market = state.markets.find_by_address(MAIN_MARKET)
     assert market.reserves == 20
 
@@ -244,6 +249,32 @@ def test_price_posted(processor: CompoundProcessor, state: State, compound_dummy
     processor.process_event(state, price_posted_event)
     assert len(state.oracles) == 1
     assert state.oracles.get_oracle(MAIN_ORACLE).get_price(MAIN_MARKET) == 200
+
+
+def test_price_updated(processor: CompoundProcessor, state: State, compound_dummy_events):
+    price_posted_event = get_event(compound_dummy_events, "PriceUpdated")
+    processor.process_event(state, price_posted_event)
+    assert len(state.oracles) == 1
+    ceth = "0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5"
+    oracle = state.oracles.get_oracle("0xabab54")
+    assert oracle.get_underlying_price(ceth) == 100 * int(1e12)
+
+
+def test_sai_price_set(processor: CompoundProcessor, state: State):
+    oracle = "0xddc46a3b076aec7ab3fc37420a8edd2959764ec4"
+    event = {
+        "event": "SaiPriceSet",
+        "address": oracle,
+        "returnValues": {
+            "newPriceMantissa": "100",
+        },
+        "blockNumber": 120,
+        "transactionIndex": -1,
+        "logIndex": -2,
+    }
+    processor.process_event(state, event)
+    csai = "0xf5dce57282a584d2746faf1593d3121fcac444dc"
+    assert state.oracles.get_oracle(oracle).get_underlying_price(csai) == 100
 
 
 def test_process_all(processor: CompoundProcessor, state: State, compound_dummy_events):

@@ -109,11 +109,12 @@ class PriceOracleV14(PriceOracleV13):
         return super().get_underlying_price(ctoken)
 
 
+_sai_prices = {}
+
 @Oracle.register("0xda17fbeda95222f331cb1d252401f4b44f49f7a0")
 class PriceOracleV15(PriceOracleV1):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.sai_price = 0
 
     def get_underlying_price(self, ctoken: str) -> int:
         if is_token(ctoken, "ETH"):
@@ -131,6 +132,14 @@ class PriceOracleV15(PriceOracleV1):
             return self.get_price(DAI_ORACLE_KEY)
 
         return super().get_underlying_price(ctoken)
+
+    @property
+    def sai_price(self):
+        return _sai_prices.get(self.__class__, 0)
+
+    @sai_price.setter
+    def sai_price(self, price: int):
+        _sai_prices[self.__class__] = price
 
 
 @Oracle.register("0xddc46a3b076aec7ab3fc37420a8edd2959764ec4")
@@ -158,6 +167,8 @@ class TokenConfig:
     uniswap_market: str
     is_uniswap_reversed: bool
 
+
+_uniswap_oracle_prices = {}
 
 @Oracle.register("0x9b8eb8b3d6e2e0db36f41455185fef7049a35cae")
 class UniswapAnchorView(Oracle):
@@ -261,7 +272,7 @@ class UniswapAnchorView(Oracle):
     )
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(prices=_uniswap_oracle_prices, *args, **kwargs)
         self.token_configs = [
             self.CBAT_CONFIG,
             self.CDAI_CONFIG,
@@ -280,7 +291,7 @@ class UniswapAnchorView(Oracle):
     def get_underlying_price(self, ctoken: str) -> int:
         # Comptroller needs prices in the format: ${raw price} * 1e(36 - baseUnit)
         # Since the prices in this view have 6 decimals, we must scale them by 1e(36 - 6 - baseUnit)
-        config = self._config_by_ctoken.get(ctoken)
+        config = self._config_by_ctoken.get(ctoken.lower())
         if not config:
             return 0
         return 10 ** 30 * self._get_price(config) // config.base_unit
@@ -295,12 +306,12 @@ class UniswapAnchorView(Oracle):
         usd_per_eth = self.get_price(constants.ETH_ADDRESS)
         if usd_per_eth == 0:
             raise ValueError("ETH price not set, cannot convert to dollars")
-        return usd_per_eth * config.fixed_price / ETH_BASE_UNIT
+        return usd_per_eth * config.fixed_price // ETH_BASE_UNIT
 
     def update_price(self, token: str, price: int, inverted: bool = False):
         if not token.startswith("0x"):
             token = self._token_to_underlying.get(token)
             if not token:
-                logger.warning("no such symbol %s", token)
+                logger.debug("no such symbol %s", token)
                 return
         super().update_price(token, price, inverted=inverted)
