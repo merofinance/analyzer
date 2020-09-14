@@ -117,7 +117,7 @@ def test_mint(processor: CompoundProcessor, state: State, compound_dummy_events)
     mint_event = get_event(compound_dummy_events, "Mint")
     processor.process_event(state, mint_event)
     market = state.markets.find_by_address(MAIN_MARKET)
-    assert market.balances.total_supplied == 100
+    assert market.balances.total_underlying == 100
     assert market.balances.token_balance == 110
     assert market.balances.total_borrowed == 0
 
@@ -131,7 +131,7 @@ def test_borrow(processor: CompoundProcessor, state: State, compound_dummy_event
     mint_event = get_event(compound_dummy_events, "Mint", 1)
     market = state.markets.find_by_address(BORROW_MARKET)
     processor.process_events(state, [mint_event, borrow_event])
-    assert market.balances.total_supplied == 120
+    assert market.balances.total_underlying == 120
     assert market.balances.token_balance == 250
     assert market.balances.total_borrowed == 80
 
@@ -159,7 +159,7 @@ def test_repay_borrow(processor: CompoundProcessor, state: State, compound_dummy
     processor.process_events(state, [mint_event, borrow_event, repay_borrow_event])
 
     market = state.markets.find_by_address(BORROW_MARKET)
-    assert market.balances.total_supplied == 140
+    assert market.balances.total_underlying == 140
     assert market.balances.token_balance == 250
     assert market.balances.total_borrowed == 60
 
@@ -177,7 +177,7 @@ def test_redeem(processor: CompoundProcessor, state: State, compound_dummy_event
     processor.process_events(state, [mint_event, redeem_event])
 
     market = state.markets.find_by_address(MAIN_MARKET)
-    assert market.balances.total_supplied == 60
+    assert market.balances.total_underlying == 60
     assert market.balances.token_balance == 65
     assert market.balances.total_borrowed == 0
 
@@ -209,9 +209,9 @@ def test_liquidate_borrow(processor: CompoundProcessor, state: State, compound_d
     interests = 80 * 1033291579335879146 // int(1e18) - 80
 
     assert collateral_market.balances.token_balance == 65
-    assert collateral_market.balances.total_supplied == 60
+    assert collateral_market.balances.total_underlying == 60
     assert collateral_market.balances.total_borrowed == 0
-    assert borrow_market.balances.total_supplied == 200 # fully repaid
+    assert borrow_market.balances.total_underlying == 200  # fully repaid
     assert borrow_market.balances.token_balance == 250
     assert borrow_market.balances.total_borrowed == interests
 

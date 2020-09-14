@@ -89,7 +89,7 @@ class CompoundProcessor(Processor):
     def process_mint(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
         mint_amount = int(event_values["mintAmount"])
-        market.balances.total_supplied += mint_amount
+        market.balances.total_underlying += mint_amount
 
         market.balances.token_balance += int(event_values["mintTokens"])
 
@@ -100,12 +100,12 @@ class CompoundProcessor(Processor):
 
         # NOTE: the following assert could fail for ERC20 based cTokens because
         # someone could transfer the underlying token directly to the cTokens address
-        # assert market.balances.total_supplied >= redeem_amount, \
-        #         f"supply can never be negative, {market.balances.total_supplied} < {redeem_amount}"
+        # assert market.balances.total_underlying >= redeem_amount, \
+        #         f"supply can never be negative, {market.balances.total_underlying} < {redeem_amount}"
         assert market.balances.token_balance >= redeem_tokens, \
                 f"token balance can never be negative, {market.balances.token_balance} < {redeem_tokens}"
 
-        market.balances.total_supplied -= redeem_amount
+        market.balances.total_underlying -= redeem_amount
         market.balances.token_balance -= redeem_tokens
 
     def process_transfer(self, state: State, event_address: str, event_values: dict):
@@ -130,9 +130,9 @@ class CompoundProcessor(Processor):
 
         # NOTE: the following assert could fail for ERC20 based cTokens because
         # someone could transfer the underlying token directly to the cTokens address
-        # assert market.balances.total_supplied >= amount, \
-        #         f"total supplied can never be negative, {market.balances.total_supplied} < {amount}"
-        market.balances.total_supplied -= amount
+        # assert market.balances.total_underlying >= amount, \
+        #         f"total supplied can never be negative, {market.balances.total_underlying} < {amount}"
+        market.balances.total_underlying -= amount
 
         borrower = event_values["borrower"]
         self.update_user_borrow(market, borrower)
@@ -150,7 +150,7 @@ class CompoundProcessor(Processor):
                 f"borrow can never be negative, {user_balances.total_borrowed} < {amount}"
 
         market.balances.total_borrowed -= amount
-        market.balances.total_supplied += amount
+        market.balances.total_underlying += amount
         user_balances.total_borrowed -= amount
 
     def process_liquidate_borrow(self, state: State, event_address: str, event_values: dict):

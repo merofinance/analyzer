@@ -27,7 +27,7 @@ def test_markets_find_market_by_address(markets: Markets):
     assert market == markets[0]
     assert id(market) == id(markets[0])
     assert market.balances.total_borrowed == 1
-    assert market.balances.total_supplied == 2
+    assert market.balances.total_underlying == 2
 
     with pytest.raises(ValueError):
         markets.find_by_address("0xXXXX")
@@ -47,7 +47,7 @@ def test_market_underlying_exchange_rate():
     # values take at block 10827297 from
     # https://etherscan.io/token/0x5d3a536e4d6dbd6114cc1ead35777bab948e3643#readContract
     balances = Balances(
-        total_supplied=126481409090838027046951927,
+        total_underlying=126481409090838027046951927,
         total_borrowed=523702215450739537804145681,
         token_balance=3147635947303247595,
     )
