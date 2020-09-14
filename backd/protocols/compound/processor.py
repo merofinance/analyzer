@@ -177,11 +177,13 @@ class CompoundProcessor(Processor):
         value = int(event_values["newPriceMantissa"])
         oracle.update_price(event_values["asset"], value)
 
-    def process_inverted_price_posted(self, state: State, event_address: str, event_values: dict):
+    def process_inverted_price_posted(self, state: State, _event_address: str, event_values: dict):
         # virtual event generated when Oracle DSValue is updated
-        oracle = state.oracles.current
+        oracle = state.oracles.get_oracle(
+            "0x02557a5e05defeffd4cae6d83ea3d173b272c904")  # oracle version 1
         value = int(event_values["newPriceMantissa"])
-        oracle.update_price(event_address, value, inverted=True)
+        for ctoken in event_values["tokens"]:
+            oracle.update_price(ctoken, value, inverted=True)
 
     def process_new_interest_params(self, state: State, event_address: str, event_values: dict):
         try:

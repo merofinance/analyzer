@@ -10,7 +10,7 @@ from ...logger import logger
 MARKETS_BY_CTOKEN = {m["address"]: m for m in constants.COMPOUND_MARKETS}
 
 USDC_ORACLE_KEY = "0x0000000000000000000000000000000000000001"
-DAI_ORACLE_KEY  = "0x0000000000000000000000000000000000000002"
+DAI_ORACLE_KEY = "0x0000000000000000000000000000000000000002"
 
 ETH_BASE_UNIT = int(1e18)
 
@@ -29,22 +29,13 @@ def find_market(symbol: str) -> dict:
     raise ValueError(f"no such token: {symbol}")
 
 
+_oracle_prices = {}
+
+
 @Oracle.register("0x02557a5e05defeffd4cae6d83ea3d173b272c904")
 class PriceOracleV1(Oracle):
-    _shared_state = {}
     def __init__(self, *args, **kwargs):
-        """slightly nasty hack to emulate a single state across instances
-        as it would be the case for a deployed contract
-        all subclasses will also inherit this single state
-        which allows to access the same prices from subclasses
-        This only makes sense for OracleProxy
-        """
-        self.__dict__ = self._shared_state
-        if getattr(self, "_initialized", False):
-            return
-
-        super().__init__(*args, **kwargs)
-        self._initialized = True
+        super().__init__(*args, prices=_oracle_prices, **kwargs)
 
     def get_underlying_price(self, ctoken: str) -> int:
         if not self.is_listed(ctoken):

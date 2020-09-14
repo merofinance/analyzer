@@ -9,6 +9,7 @@ from ... import utils
 from .entities import CompoundState
 from .processor import CompoundProcessor
 from . import oracles # pylint: disable=unused-import
+from .constants import DS_VALUES_MAPPING
 
 
 @Protocol.register("compound")
@@ -36,7 +37,10 @@ class CompoundProtocol(Protocol):
             yield {
                 "event": "InvertedPricePosted",
                 "address": row["address"],
-                "returnValues": {"newPriceMantissa": str(row["price"])},
+                "returnValues": {
+                    "newPriceMantissa": str(row["price"]),
+                    "tokens": DS_VALUES_MAPPING.get(row["address"].lower(), []),
+                },
                 "blockNumber": row["blockNumber"],
                 # assume it is the first event in the block
                 # although it would require more information to be sure
