@@ -9,18 +9,12 @@ from backd.entities import PointInTime
 from backd.protocols.compound.entities import CompoundState as State
 from backd.protocols.compound.interest_rate_models import JumpRateModel
 
-from tests.conftest import get_event, get_events_until
-
-
-MAIN_USER = "0x1234a"
-MAIN_MARKET = "0x1A3B"
-MAIN_ORACLE = "0xAB23"
-BORROW_MARKET = "0xA123"
+from tests.conftest import get_event, get_events_until, MAIN_MARKET, MAIN_USER, MAIN_ORACLE, BORROW_MARKET
 
 
 @pytest.fixture
-def processor():
-    return CompoundProcessor()
+def processor(dummy_markets_meta):
+    return CompoundProcessor(markets=dummy_markets_meta)
 
 
 @pytest.fixture
@@ -116,7 +110,8 @@ def test_market_exited(processor: CompoundProcessor, dsr, compound_dummy_events)
 
 def test_mint(processor: CompoundProcessor, state: State, compound_dummy_events):
     mint_event = get_event(compound_dummy_events, "Mint")
-    processor.process_event(state, mint_event)
+    transfer_event = get_event(compound_dummy_events, "Transfer", index=1)
+    processor.process_events(state, [mint_event, transfer_event])
     market = state.markets.find_by_address(MAIN_MARKET)
     assert market.balances.total_underlying == 100
     assert market.balances.token_balance == 110
@@ -130,8 +125,11 @@ def test_mint(processor: CompoundProcessor, state: State, compound_dummy_events)
 def test_borrow(processor: CompoundProcessor, state: State, compound_dummy_events):
     borrow_event = get_event(compound_dummy_events, "Borrow")
     mint_event = get_event(compound_dummy_events, "Mint", 1)
+    mint_transfer_event = get_event(compound_dummy_events, "Transfer", 2)
+    borrow_transfer_event = get_event(compound_dummy_events, "Transfer", 3)
     market = state.markets.find_by_address(BORROW_MARKET)
-    processor.process_events(state, [mint_event, borrow_event])
+    processor.process_events(
+        state, [mint_event, mint_transfer_event, borrow_event, borrow_transfer_event])
     assert market.balances.total_underlying == 120
     assert market.balances.token_balance == 250
     assert market.balances.total_borrowed == 80
@@ -158,8 +156,13 @@ def test_repay_borrow(processor: CompoundProcessor, state: State, compound_dummy
 
     mint_event = get_event(compound_dummy_events, "Mint", 1)
     borrow_event = get_event(compound_dummy_events, "Borrow")
-    processor.process_events(
-        state, [mint_event, borrow_event, repay_borrow_event])
+    mint_transfer_event = get_event(compound_dummy_events, "Transfer", 2)
+    borrow_transfer_event = get_event(compound_dummy_events, "Transfer", 3)
+    repay_borrow_transfer_event = get_event(
+        compound_dummy_events, "Transfer", 4)
+    processor.process_events(state, [mint_event, mint_transfer_event,
+                                     borrow_event, borrow_transfer_event,
+                                     repay_borrow_event, repay_borrow_transfer_event])
 
     market = state.markets.find_by_address(BORROW_MARKET)
     assert market.balances.total_underlying == 140
@@ -177,7 +180,11 @@ def test_redeem(processor: CompoundProcessor, state: State, compound_dummy_event
         processor.process_event(state, redeem_event)
 
     mint_event = get_event(compound_dummy_events, "Mint")
-    processor.process_events(state, [mint_event, redeem_event])
+    mint_transfer_event = get_event(compound_dummy_events, "Transfer", index=1)
+    redeem_transfer_event = get_event(
+        compound_dummy_events, "Transfer", index=6)
+    processor.process_events(state, [mint_event, mint_transfer_event,
+                                     redeem_event, redeem_transfer_event])
 
     market = state.markets.find_by_address(MAIN_MARKET)
     assert market.balances.total_underlying == 60
@@ -204,7 +211,7 @@ def test_transfer(processor: CompoundProcessor, state: State, compound_dummy_eve
 
 def test_liquidate_borrow(processor: CompoundProcessor, state: State, compound_dummy_events):
     # get liquidation and next repay
-    events = get_events_until(compound_dummy_events, "RepayBorrow", 1)
+    events = get_events_until(compound_dummy_events, "MarketExited")
     borrow_market = state.markets.find_by_address(BORROW_MARKET)
     collateral_market = state.markets.find_by_address(MAIN_MARKET)
     processor.process_events(state, events)
@@ -220,7 +227,7 @@ def test_liquidate_borrow(processor: CompoundProcessor, state: State, compound_d
 
     collateral_user_balances = collateral_market.users[MAIN_USER].balances
     borrow_user_balances = borrow_market.users[MAIN_USER].balances
-    assert collateral_user_balances.token_balance == 65
+    assert collateral_user_balances.token_balance == 10
     assert borrow_user_balances.total_borrowed == interests
 
 

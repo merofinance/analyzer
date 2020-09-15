@@ -21,13 +21,24 @@ from ...tokens.dai.dsr import DSR
 FACTORS_DIVISOR = Decimal(10) ** constants.COMPOUND_FACTORS_DECIMALS
 
 
+def get_any_key(obj, keys):
+    for key in keys:
+        if key in obj:
+            return obj[key]
+    raise ValueError("none of {0} in {1}".format(", ".join(keys), obj))
+
+
 @Processor.register("compound")
 class CompoundProcessor(Processor):
-    def __init__(self, hooks: Hooks = None):
+    def __init__(self, hooks: Hooks = None, markets: dict = None):
         if hooks is None:
             hooks = Hooks()
+        if markets is None:
+            markets = constants.COMPOUND_MARKETS
+        self.markets_metadata = {
+            market["underlying_address"]: market for market in markets}
         dsr_hook = DSRHook()
-        hooks.prehooks.insert(0, dsr_hook)
+        # hooks.prehooks.insert(0, dsr_hook)
         super().__init__(hooks=hooks)
 
     def _process_event(self, state, event):
@@ -53,7 +64,7 @@ class CompoundProcessor(Processor):
             state.markets.add_market(market)
         market.comptroller_address = event_values["newComptroller"]
 
-    def process_new_market_interest_rate_model(self, state: State, # pylint: disable=invalid-name
+    def process_new_market_interest_rate_model(self, state: State,  # pylint: disable=invalid-name
                                                event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
         market.interest_rate_model = event_values["newInterestRateModel"]
@@ -61,7 +72,8 @@ class CompoundProcessor(Processor):
 
     def process_new_reserve_factor(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
-        factor = int(event_values["newReserveFactorMantissa"]) / FACTORS_DIVISOR
+        factor = int(
+            event_values["newReserveFactorMantissa"]) / FACTORS_DIVISOR
         assert 0 <= factor <= 1, f"close factor must be between 0 and 1, not {factor}"
         market.reserve_factor = factor
 
@@ -72,7 +84,8 @@ class CompoundProcessor(Processor):
 
     def process_new_collateral_factor(self, state: State, _event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_values["cToken"])
-        market.collateral_factor = int(event_values["newCollateralFactorMantissa"]) / FACTORS_DIVISOR
+        market.collateral_factor = int(
+            event_values["newCollateralFactorMantissa"]) / FACTORS_DIVISOR
 
     def process_market_listed(self, state: State, _event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_values["cToken"])
@@ -89,8 +102,9 @@ class CompoundProcessor(Processor):
     def process_mint(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
         mint_amount = int(event_values["mintAmount"])
-        market.balances.total_underlying += mint_amount
-
+        # NOTE: ERC20 tokens are handled through the transfer event
+        if event_address == constants.CETH_ADDRESS:
+            market.balances.total_underlying += mint_amount
         market.balances.token_balance += int(event_values["mintTokens"])
 
     def process_redeem(self, state: State, event_address: str, event_values: dict):
@@ -98,21 +112,21 @@ class CompoundProcessor(Processor):
         redeem_amount = int(event_values["redeemAmount"])
         redeem_tokens = int(event_values["redeemTokens"])
 
-        # NOTE: the following assert could fail for ERC20 based cTokens because
-        # someone could transfer the underlying token directly to the cTokens address
-        # assert market.balances.total_underlying >= redeem_amount, \
-        #         f"supply can never be negative, {market.balances.total_underlying} < {redeem_amount}"
         assert market.balances.token_balance >= redeem_tokens, \
-                f"token balance can never be negative, {market.balances.token_balance} < {redeem_tokens}"
+            f"token balance can never be negative, {market.balances.token_balance} < {redeem_tokens}"
 
-        market.balances.total_underlying -= redeem_amount
+        # NOTE: ERC20 tokens are handled through the transfer event
+        if event_address == constants.CETH_ADDRESS:
+            assert market.balances.total_underlying >= redeem_amount, \
+                f"supply can never be negative, {market.balances.total_underlying} < {redeem_amount}"
+            market.balances.total_underlying -= redeem_amount
         market.balances.token_balance -= redeem_tokens
 
     def process_transfer(self, state: State, event_address: str, event_values: dict):
         try:
             market = state.markets.find_by_address(event_address)
         except ValueError:
-            return self.process_token_transfer(state, event_address, event_values)
+            return self._process_token_transfer(state, event_address, event_values)
         amount = int(event_values["amount"])
 
         from_ = event_values["from"]
@@ -126,24 +140,48 @@ class CompoundProcessor(Processor):
         if to != event_address:
             market.users[to].balances.token_balance += amount
 
-    def process_token_transfer(self, state: State, event_address: str, event_values: dict):
-        # TODO: from or to should be market. Handle event and remove token update from mint/redeem
-        pass
+    def _process_token_transfer(self, state: State, event_address: str, event_values: dict):
+        address_from = get_any_key(event_values, ["from", "_from", "src"])
+        address_to = get_any_key(event_values, ["to", "_to", "dst"])
+        amount = int(get_any_key(event_values, [
+                     "amount", "value", "wad", "_value"]))
+
+        market_meta = self.markets_metadata.get(event_address)
+        if not market_meta:
+            return
+        cmarket_address = market_meta["address"]
+
+        if cmarket_address == address_from:
+            market = state.markets.find_by_address(address_from)
+            assert market.balances.total_underlying >= amount, \
+                f"total supplied can never be negative, {market.balances.total_underlying} < {amount}"
+            market.balances.total_underlying -= amount
+
+        if address_from == constants.ETH_ADDRESS:
+            market = state.markets.find_by_address(constants.CDAI_ADDRESS)
+            assert market.balances.total_underlying >= amount, \
+                f"total supplied can never be negative, {market.balances.total_underlying} < {amount}"
+            market.balances.total_underlying -= amount
+
+        if cmarket_address == address_to:
+            market = state.markets.find_by_address(address_to)
+            market.balances.total_underlying += amount
 
     def process_borrow(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
         amount = int(event_values["borrowAmount"])
         market.balances.total_borrowed = int(event_values["totalBorrows"])
 
-        # NOTE: the following assert could fail for ERC20 based cTokens because
-        # someone could transfer the underlying token directly to the cTokens address
-        # assert market.balances.total_underlying >= amount, \
-        #         f"total supplied can never be negative, {market.balances.total_underlying} < {amount}"
-        market.balances.total_underlying -= amount
+        # NOTE: ERC20 tokens are handled through the transfer event
+        if event_address == constants.CETH_ADDRESS:
+            assert market.balances.total_underlying >= amount, \
+                f"total supplied can never be negative, {market.balances.total_underlying} < {amount}"
+            market.balances.total_underlying -= amount
 
         borrower = event_values["borrower"]
         self.update_user_borrow(market, borrower)
-        market.users[borrower].balances.total_borrowed += int(event_values["borrowAmount"])
+        market.users[borrower].balances.total_borrowed += int(
+            event_values["borrowAmount"])
 
     def process_repay_borrow(self, state: State, event_address: str, event_values: dict):
         borrower = event_values["borrower"]
@@ -152,12 +190,14 @@ class CompoundProcessor(Processor):
         self.update_user_borrow(market, borrower)
         user_balances = market.users[borrower].balances
         assert market.balances.total_borrowed >= amount, \
-                f"borrow can never be negative, {market.balances.total_borrowed} < {amount}"
+            f"borrow can never be negative, {market.balances.total_borrowed} < {amount}"
         assert user_balances.total_borrowed >= amount, \
-                f"borrow can never be negative, {user_balances.total_borrowed} < {amount}"
+            f"borrow can never be negative, {user_balances.total_borrowed} < {amount}"
 
         market.balances.total_borrowed = int(event_values["totalBorrows"])
-        market.balances.total_underlying += amount
+        # NOTE: ERC20 tokens are handled through the transfer event
+        if event_address == constants.CETH_ADDRESS:
+            market.balances.total_underlying += amount
         user_balances.total_borrowed -= amount
 
     def process_liquidate_borrow(self, state: State, event_address: str, event_values: dict):
@@ -213,7 +253,8 @@ class CompoundProcessor(Processor):
         market = state.markets.find_by_address(event_address)
         market.balances.total_borrowed = int(event_values["totalBorrows"])
         market.borrow_index = int(event_values["borrowIndex"])
-        market.reserves += int(int(event_values["interestAccumulated"]) * market.reserve_factor)
+        market.reserves += int(
+            int(event_values["interestAccumulated"]) * market.reserve_factor)
 
     def update_user_borrow(self, market: Market, user_address: str):
         user = market.users[user_address]

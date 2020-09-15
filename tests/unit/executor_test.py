@@ -1,11 +1,15 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from backd import executor
+
+from tests.conftest import DUMMY_MARKETS_META
 
 
 MAIN_MARKET = "0x1A3B"
 
 
+@patch("backd.constants.COMPOUND_MARKETS", DUMMY_MARKETS_META)
 def test_process_all_events():
     state = executor.process_all_events(
         "compound", min_block=120, max_block=125)

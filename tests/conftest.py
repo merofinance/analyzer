@@ -15,6 +15,16 @@ from backd.tokens.dai.dsr import DSR
 
 
 FIXTURES_PATH = path.join(settings.PROJECT_ROOT, "tests", "fixtures")
+MAIN_USER = "0x1234a"
+MAIN_MARKET = "0x1A3B"
+MAIN_TOKEN = "0xBA13"
+MAIN_ORACLE = "0xAB23"
+BORROW_MARKET = "0xA123"
+BORROW_TOKEN = "0xB123"
+DUMMY_MARKETS_META = [
+    {"address": MAIN_MARKET.lower(), "underlying_address": MAIN_TOKEN.lower(), "underlying_symbol": "MAIN"},
+    {"address": BORROW_MARKET.lower(), "underlying_address": BORROW_TOKEN.lower(), "underlying_symbol": "BOR"},
+]
 
 
 @pytest.fixture
@@ -29,6 +39,11 @@ def markets():
         [Market("0xa234", balances=Balances(total_borrowed=1, total_underlying=2)),
          Market("0x1A3B"),
          Market("0xA123")])
+
+
+@pytest.fixture
+def dummy_markets_meta():
+    return DUMMY_MARKETS_META
 
 
 @pytest.fixture
@@ -67,13 +82,15 @@ def get_event(compound_dummy_events, name, index=0):
 
 
 def get_events_until(compound_dummy_events, name, index=0):
-    indices = [i for i, e in enumerate(compound_dummy_events) if e["event"] == name]
+    indices = [i for i, e in enumerate(
+        compound_dummy_events) if e["event"] == name]
     return compound_dummy_events[:indices[index] + 1]
 
 
 @InterestRateModel.register("0xbae0")
 class DummyInterestRateModel(JumpRateModel):
     pass
+
 
 @Oracle.register("0xab23")
 class DummyOracle(Oracle):
