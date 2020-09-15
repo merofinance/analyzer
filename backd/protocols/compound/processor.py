@@ -109,7 +109,10 @@ class CompoundProcessor(Processor):
         market.balances.token_balance -= redeem_tokens
 
     def process_transfer(self, state: State, event_address: str, event_values: dict):
-        market = state.markets.find_by_address(event_address)
+        try:
+            market = state.markets.find_by_address(event_address)
+        except ValueError:
+            return self.process_token_transfer(state, event_address, event_values)
         amount = int(event_values["amount"])
 
         from_ = event_values["from"]
@@ -122,6 +125,10 @@ class CompoundProcessor(Processor):
         to = event_values["to"]
         if to != event_address:
             market.users[to].balances.token_balance += amount
+
+    def process_token_transfer(self, state: State, event_address: str, event_values: dict):
+        # TODO: from or to should be market. Handle event and remove token update from mint/redeem
+        pass
 
     def process_borrow(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
