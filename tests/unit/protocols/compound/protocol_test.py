@@ -19,7 +19,7 @@ def test_create_empty_state(protocol: CompoundProtocol):
 
 
 def test_count_events(protocol: CompoundProtocol, compound_dummy_events):
-    assert protocol.count_events() == len(compound_dummy_events)
+    assert protocol.count_events(max_block=125) == len(compound_dummy_events)
 
     max_block = 123
     expected = count_events(compound_dummy_events, 0, max_block)
@@ -33,7 +33,7 @@ def test_count_events(protocol: CompoundProtocol, compound_dummy_events):
 
 
 def test_iterate_events(protocol: CompoundProtocol, compound_dummy_events):
-    events = list(protocol.iterate_events())
+    events = list(protocol.iterate_events(max_block=int(1e18)))
     # all "regular" events and the SaiPriceSet
     assert len(events) == len(compound_dummy_events) + 1
     assert all(get_timestamp(events[i]) <= get_timestamp(

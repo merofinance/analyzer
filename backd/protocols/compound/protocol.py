@@ -1,4 +1,5 @@
 from typing import Iterable
+from functools import lru_cache
 
 from ...event_processor import Processor
 from ...hook import Hooks
@@ -75,8 +76,16 @@ class CompoundProtocol(Protocol):
         block_number = {}
         if min_block:
             block_number.update({"$gte": min_block})
-        if max_block:
-            block_number.update({"$lte": max_block})
-        if block_number:
-            return {"blockNumber": block_number}
-        return {}
+        if max_block is None:
+            max_block = self.get_max_block()
+        block_number.update({"$lte": max_block})
+        return {"blockNumber": block_number}
+
+    @lru_cache(maxsize=None)
+    def get_max_block(self):
+        cursor = db.events.aggregate([
+            {"$match": {"event": "AccrueInterest"}},
+            {"$group": {"_id": "$address", "max_block": {"$max": "$blockNumber"}}},
+            {"$group": {"_id": None, "block": {"$min": "$max_block"}}}
+        ])
+        return next(cursor)["block"]

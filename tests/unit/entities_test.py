@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 
 from backd.entities import PointInTime, Market, Markets, Oracles, Oracle, MarketUser

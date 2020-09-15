@@ -7,6 +7,9 @@ from ...tokens.dai.dsr import DSR
 from .interest_rate_models import InterestRateModel
 
 
+EXP_SCALE = int(1e18)
+
+
 class InterestRateModels:
     def __init__(self, dsr: DSR, interest_rate_models: Dict[str, InterestRateModel] = None):
         if interest_rate_models is None:
@@ -52,3 +55,25 @@ class CompoundState(State):
     @classmethod
     def create(cls):
         return cls(dsr=DSR.create())
+
+    def compute_user_position(self, user: str) -> (int, int):
+        sum_collateral = 0
+        sum_borrows = 0
+
+        for market in self.markets:
+            market_user = market.users[user]
+            user_balances = market_user.balances
+            exchange_rate = market.underlying_exchange_rate
+            collateral_factor = market.collateral_factor
+            oracle_price = self.oracles.current.get_underlying_price(
+                market.address)
+
+            tokens_to_ether_left = Decimal(
+                round(collateral_factor * exchange_rate)) / EXP_SCALE
+            tokens_to_ether = round(tokens_to_ether_left * oracle_price)
+            sum_collateral += tokens_to_ether * \
+                user_balances.token_balance // EXP_SCALE
+            sum_borrows += oracle_price * \
+                market_user.borrowed_at(market.borrow_index) // EXP_SCALE
+
+        return (sum_collateral, sum_borrows)

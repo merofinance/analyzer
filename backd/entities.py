@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Iterator
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
@@ -72,6 +72,9 @@ class Market:
             self.balances.total_borrowed - self.reserves
         return numerator * int(1e18) // self.balances.token_balance
 
+    def compute_new_total_borrowed(self, new_index: int) -> int:
+        return self.balances.total_borrowed * new_index // self.borrow_index
+
     def __eq__(self, other):
         return self.address == other.address
 
@@ -108,6 +111,9 @@ class Markets:
 
     def __len__(self):
         return len(self.markets)
+
+    def __iter__(self) -> Iterator[Market]:
+        return iter(self.markets)
 
 
 @dataclass
@@ -153,7 +159,7 @@ class Oracles:
         return len(self.oracles)
 
     @property
-    def current(self):
+    def current(self) -> Oracle:
         return self.oracles[self.current_address]
 
 
@@ -170,6 +176,3 @@ class State:
             self.markets = Markets()
         if self.oracles is None:
             self.oracles = Oracles(self.markets)
-
-    def compute_user_position(self, user: str) -> (int, int):
-        pass

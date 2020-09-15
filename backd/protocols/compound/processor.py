@@ -126,7 +126,7 @@ class CompoundProcessor(Processor):
     def process_borrow(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
         amount = int(event_values["borrowAmount"])
-        market.balances.total_borrowed += amount
+        market.balances.total_borrowed = int(event_values["totalBorrows"])
 
         # NOTE: the following assert could fail for ERC20 based cTokens because
         # someone could transfer the underlying token directly to the cTokens address
@@ -149,7 +149,7 @@ class CompoundProcessor(Processor):
         assert user_balances.total_borrowed >= amount, \
                 f"borrow can never be negative, {user_balances.total_borrowed} < {amount}"
 
-        market.balances.total_borrowed -= amount
+        market.balances.total_borrowed = int(event_values["totalBorrows"])
         market.balances.total_underlying += amount
         user_balances.total_borrowed -= amount
 
@@ -204,13 +204,13 @@ class CompoundProcessor(Processor):
 
     def process_accrue_interest(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
+        market.balances.total_borrowed = int(event_values["totalBorrows"])
         market.borrow_index = int(event_values["borrowIndex"])
         market.reserves += int(int(event_values["interestAccumulated"]) * market.reserve_factor)
 
     def update_user_borrow(self, market: Market, user_address: str):
         user = market.users[user_address]
         new_total_borrowed = user.borrowed_at(market.borrow_index)
-        market.balances.total_borrowed += new_total_borrowed - user.balances.total_borrowed
         user.balances.total_borrowed = new_total_borrowed
         user.borrow_index = market.borrow_index
 
