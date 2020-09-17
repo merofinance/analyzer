@@ -2,7 +2,7 @@
 
 ## Install backd
 
-```
+```sh
 git clone https://github.com/danhper/backd.git
 cd backd
 pip install -e .
@@ -17,23 +17,25 @@ https://www.dropbox.com/sh/i5v1orfxg2la7f6/AACNX9078VnONF02lIWwZjbJa?dl=0
 
 MongoDB needs to be running
 
-```
+```sh
 find /path/to/events -name "*.jsonl.gz" | xargs zcat | mongoimport --db=backd-data --collection=events
 python scripts/store_dsr.py data/dsr-rates.json
 backd create-indices
 ```
+Note for iOS users, replace `zcat` with `gzcat`. See [zcat vs gzcat](http://fanhuan.github.io/en/2016/01/07/zcat-vs-gzcat/).
+
 
 ## Testing
 
 Populate test database
 
-```
+```sh
 python scripts/import_test_data.py
 ```
 
 Run tests
 
-```
+```sh
 pytest
 ```
 
