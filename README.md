@@ -17,13 +17,14 @@ https://www.dropbox.com/sh/i5v1orfxg2la7f6/AACNX9078VnONF02lIWwZjbJa?dl=0
 
 MongoDB needs to be running
 
-```sh
-find /path/to/events -name "*.jsonl.gz" | xargs zcat | mongoimport --db=backd-data --collection=events
+```
+find /path/to/data/events -name "*.jsonl.gz" | xargs zcat | mongoimport --db=backd-data --collection=events
 python scripts/store_dsr.py data/dsr-rates.json
+python scripts/store_ds_values.py /path/to/data/compound/medianizer-peek-full.jsonl.gz -a 0x729D19f657BD0614b4985Cf1D82531c67569197B
 backd create-indices
 ```
-Note for iOS users, replace `zcat` with `gzcat`. See [zcat vs gzcat](http://fanhuan.github.io/en/2016/01/07/zcat-vs-gzcat/).
 
+Note for iOS users, replace `zcat` with `gzcat`. See [zcat vs gzcat](http://fanhuan.github.io/en/2016/01/07/zcat-vs-gzcat/).
 
 ## Testing
 

@@ -6,6 +6,7 @@ import pytest
 from tests.conftest import FIXTURES_PATH
 from backd.protocols.compound.entities import CompoundState
 from backd import executor
+from backd import settings
 from backd.entities import Oracle
 
 
@@ -15,6 +16,7 @@ def sample_prices():
         return [json.loads(line) for line in f]
 
 
+@pytest.mark.skipif(settings.BACKD_ENV == "test", reason="requires full database")
 def test_prices(sample_prices):
     state = CompoundState.create()
     last_block_seen = 0

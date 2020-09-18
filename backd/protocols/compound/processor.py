@@ -220,7 +220,3 @@ class CompoundProcessor(Processor):
         new_total_borrowed = user.borrowed_at(market.borrow_index)
         user.balances.total_borrowed = new_total_borrowed
         user.borrow_index = market.borrow_index
-
-    @classmethod
-    def create_empty_state(cls) -> State:
-        return State(dsr=DSR.create())

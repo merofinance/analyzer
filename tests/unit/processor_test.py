@@ -11,10 +11,6 @@ class DummyProcessor(Processor):
         market = state.markets.find_by_address("0xa234")
         market.balances.total_borrowed = 777
 
-    @classmethod
-    def create_empty_state(cls) -> State:
-        return State(PROTOCOL_NAME)
-
 
 def test_process_event(markets, compound_redeem_event):
     state = State(PROTOCOL_NAME, markets=markets)
