@@ -2,7 +2,7 @@ from typing import Dict
 from dataclasses import dataclass
 from decimal import Decimal
 
-from ...entities import State
+from ...entities import State, Market
 from ...tokens.dai.dsr import DSR
 from .interest_rate_models import InterestRateModel
 
@@ -36,6 +36,14 @@ class InterestRateModels:
         model = class_(dsr=self.dsr)
         self.interest_rate_models[address] = model
         return model
+
+
+@dataclass
+class CDaiMarket(Market):
+    dsr_amount: int = 0
+
+    def get_cash(self):
+        return self.balances.total_underlying + self.dsr_amount
 
 
 @dataclass

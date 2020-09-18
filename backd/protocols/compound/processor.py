@@ -11,11 +11,10 @@ from ... import constants
 from ... import normalizer
 from ...event_processor import Processor
 from ...entities import Market
-from .entities import CompoundState as State
+from .entities import CompoundState as State, CDaiMarket
 from ...logger import logger
 from ...hook import Hooks
 from .hooks import DSRHook
-from ...tokens.dai.dsr import DSR
 
 
 FACTORS_DIVISOR = Decimal(10) ** constants.COMPOUND_FACTORS_DECIMALS
@@ -38,7 +37,7 @@ class CompoundProcessor(Processor):
         self.markets_metadata = {
             market["underlying_address"]: market for market in markets}
         dsr_hook = DSRHook()
-        # hooks.prehooks.insert(0, dsr_hook)
+        hooks.hooks.insert(0, dsr_hook)
         super().__init__(hooks=hooks)
 
     def _process_event(self, state, event):
@@ -60,7 +59,10 @@ class CompoundProcessor(Processor):
         try:
             market = state.markets.find_by_address(event_address)
         except ValueError:
-            market = Market(event_address)
+            if event_address == constants.CDAI_ADDRESS:
+                market = CDaiMarket(event_address)
+            else:
+                market = Market(event_address)
             state.markets.add_market(market)
         market.comptroller_address = event_values["newComptroller"]
 
@@ -102,9 +104,15 @@ class CompoundProcessor(Processor):
     def process_mint(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
         mint_amount = int(event_values["mintAmount"])
+
         # NOTE: ERC20 tokens are handled through the transfer event
         if event_address == constants.CETH_ADDRESS:
             market.balances.total_underlying += mint_amount
+
+        # NOTE: CDAI uses DSR so Transfer comes from/to NULL address
+        if event_address == constants.CDAI_ADDRESS:
+            market.dsr_amount += mint_amount
+
         market.balances.token_balance += int(event_values["mintTokens"])
 
     def process_redeem(self, state: State, event_address: str, event_values: dict):
@@ -120,6 +128,13 @@ class CompoundProcessor(Processor):
             assert market.balances.total_underlying >= redeem_amount, \
                 f"supply can never be negative, {market.balances.total_underlying} < {redeem_amount}"
             market.balances.total_underlying -= redeem_amount
+
+        # NOTE: CDAI uses DSR so Transfer comes from NULL address
+        if event_address == constants.CDAI_ADDRESS:
+            assert market.dsr_amount >= redeem_amount, \
+                f"dsr_amount can never be negative, {market.dsr_amount} < {redeem_amount}"
+            market.dsr_amount -= redeem_amount
+
         market.balances.token_balance -= redeem_tokens
 
     def process_transfer(self, state: State, event_address: str, event_values: dict):
@@ -150,22 +165,15 @@ class CompoundProcessor(Processor):
         if not market_meta:
             return
         cmarket_address = market_meta["address"]
+        cmarket = state.markets.find_by_address(cmarket_address)
 
         if cmarket_address == address_from:
-            market = state.markets.find_by_address(address_from)
-            assert market.balances.total_underlying >= amount, \
-                f"total supplied can never be negative, {market.balances.total_underlying} < {amount}"
-            market.balances.total_underlying -= amount
-
-        if address_from == constants.ETH_ADDRESS:
-            market = state.markets.find_by_address(constants.CDAI_ADDRESS)
-            assert market.balances.total_underlying >= amount, \
-                f"total supplied can never be negative, {market.balances.total_underlying} < {amount}"
-            market.balances.total_underlying -= amount
+            assert cmarket.balances.total_underlying >= amount, \
+                f"total supplied can never be negative, {cmarket.balances.total_underlying} < {amount}"
+            cmarket.balances.total_underlying -= amount
 
         if cmarket_address == address_to:
-            market = state.markets.find_by_address(address_to)
-            market.balances.total_underlying += amount
+            cmarket.balances.total_underlying += amount
 
     def process_borrow(self, state: State, event_address: str, event_values: dict):
         market = state.markets.find_by_address(event_address)
@@ -177,6 +185,12 @@ class CompoundProcessor(Processor):
             assert market.balances.total_underlying >= amount, \
                 f"total supplied can never be negative, {market.balances.total_underlying} < {amount}"
             market.balances.total_underlying -= amount
+
+        # NOTE: CDAI uses DSR so Transfer comes from NULL address
+        if event_address == constants.CDAI_ADDRESS:
+            assert market.dsr_amount >= amount, \
+                f"dsr_amount can never be negative, {market.dsr_amount} < {amount}"
+            market.dsr_amount -= amount
 
         borrower = event_values["borrower"]
         self.update_user_borrow(market, borrower)
@@ -198,6 +212,11 @@ class CompoundProcessor(Processor):
         # NOTE: ERC20 tokens are handled through the transfer event
         if event_address == constants.CETH_ADDRESS:
             market.balances.total_underlying += amount
+
+        # NOTE: CDAI uses DSR so Transfer comes from NULL address
+        if event_address == constants.CDAI_ADDRESS:
+            market.dsr_amount += amount
+
         user_balances.total_borrowed -= amount
 
     def process_liquidate_borrow(self, state: State, event_address: str, event_values: dict):

@@ -6,12 +6,11 @@ from .entities import State
 
 
 def process_all_events(protocol_name: str,
-                       prehooks: List[str] = None,
-                       posthooks: List[str] = None,
+                       hooks: List[str] = None,
                        min_block: int = None,
                        max_block: int = None,
                        state: State = None) -> State:
-    hooks = Hooks(prehooks=prehooks, posthooks=posthooks)
+    hooks = Hooks(hooks=hooks)
     protocol_class = Protocol.get(protocol_name)
     protocol: Protocol = protocol_class()
     processor = protocol.create_processor(hooks=hooks)

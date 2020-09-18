@@ -1,40 +1,65 @@
-from abc import ABC, abstractmethod
 from typing import List, Union, Iterable
 
 from .entities import State
 from .base_factory import BaseFactory
 
 
-class Hook(ABC, BaseFactory):
-    @abstractmethod
-    def run(self, state: State):
+class Hook(BaseFactory):
+    def block_start(self, state: State, block_number: int):
+        pass
+
+    def block_end(self, state: State, block_number: int):
+        pass
+
+    def transaction_start(self, state: State, block_number: int, transaction_index: int):
+        pass
+
+    def transaction_end(self, state: State, block_number: int, transaction_index: int):
+        pass
+
+    def event_start(self, state: State, event: dict):
+        pass
+
+    def event_end(self, state: State, event: dict):
         pass
 
 
 class Hooks:
-    def __init__(self,
-                 prehooks: List[Union[Hook, str]] = None,
-                 posthooks: List[Union[Hook, str]] = None):
-        self.prehooks = list(self._get_hooks(prehooks))
-        self.posthooks = list(self._get_hooks(posthooks))
-        self.last_block = None
-
-    def _get_hooks(self, hooks: Union[Hook, str]) -> Iterable[Hook]:
+    def __init__(self, hooks: List[Union[Hook, str]] = None):
         if hooks is None:
-            return
+            hooks = []
+        self.hooks = []
         for hook in hooks:
             if isinstance(hook, str):
                 hook = Hook.get(hook)()
-            yield hook
+            self.hooks.append(hook)
+        self._last_block = None
+        self._last_transaction = None
 
-    def execute_prehooks(self, state: State):
-        self._execute_hooks(state, self.prehooks)
+    def execute_hooks_start(self, state: State, event: dict):
+        for hook in self.hooks:
+            if self._last_transaction != state.current_event_time.transaction_index:
+                hook.transaction_end(
+                    state, self._last_block, self._last_transaction)
 
-    def execute_posthooks(self, state: State):
-        self._execute_hooks(state, self.posthooks)
-        self.last_block = state.current_event_time.block_number
+            if self._last_block != state.current_event_time.block_number:
+                hook.block_end(state, self._last_block)
+                self._last_block = state.current_event_time.block_number
+                hook.block_start(state, self._last_block)
 
-    def _execute_hooks(self, state: State, hooks: List[Hook]):
-        for hook in hooks:
-            if self.last_block != state.current_event_time.block_number:
-                hook.run(state)
+            if self._last_transaction != state.current_event_time.transaction_index:
+                self._last_transaction = state.current_event_time.transaction_index
+                hook.transaction_start(
+                    state, self._last_block, self._last_transaction)
+
+            hook.event_start(state, event)
+
+    def execute_hooks_end(self, state: State, event: dict):
+        for hook in self.hooks:
+            hook.event_end(state, event)
+
+    def finalize_hooks(self, state: State):
+        for hook in self.hooks:
+            hook.transaction_end(state, self._last_block,
+                                 self._last_transaction)
+            hook.block_end(state, self._last_block)
