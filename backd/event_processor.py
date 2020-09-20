@@ -12,9 +12,11 @@ class Processor(ABC, BaseFactory):
     def __init__(self, hooks: Hooks = None):
         self.hooks = hooks
 
-    def process_events(self, state: State, events: Iterable[dict], total_count: int = None):
-        for event in tqdm(events, total=total_count):
+    def process_events(self, state: State, events: Iterable[dict], pbar: tqdm = None):
+        for event in events:
             self.process_event(state, event)
+            if pbar:
+                pbar.update()
         if self.hooks:
             self.hooks.finalize_hooks(state)
 

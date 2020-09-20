@@ -23,7 +23,7 @@ class CompoundProtocol(Protocol):
 
     def count_events(self, min_block: int = None, max_block: int = None) -> int:
         condition = self.make_block_range_condition(min_block, max_block)
-        collections = [db.events, db.ds_values, db.chai_values]
+        collections = [db.events, db.ds_values, db.chi_values]
         sai_events_count = len(list(self.sai_price_events(min_block, max_block)))
         db_events_count = sum(col.count_documents(condition) for col in collections)
         return sai_events_count + db_events_count

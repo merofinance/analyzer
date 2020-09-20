@@ -49,7 +49,11 @@ class CDaiMarket(Market):
     chi: int = 10 ** 27
 
     def get_cash(self):
-        return self.balances.total_underlying + self.current_pie
+        # NOTE: when DSR is activated, value is take from DSR contract
+        # otherwise, the regular DAI balance is used
+        if self.dsr_active:
+            return self.current_pie
+        return self.balances.total_underlying
 
     def transfer_in(self, amount: int):
         self.pie += amount * constants.RAY // self.chi

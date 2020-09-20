@@ -10,7 +10,7 @@ from backd.protocols.compound.entities import CompoundState as State
 from backd.protocols.compound.interest_rate_models import JumpRateModel
 from backd.protocols.compound import constants
 
-from tests.conftest import (
+from tests.fixtures import (
     get_event,
     get_events_until,
     MAIN_MARKET,

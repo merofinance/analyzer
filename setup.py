@@ -14,6 +14,7 @@ setup(
         "dev": [
             "pylint",
             "black",
+            "pytest-profiling",
             "ipython",
             "jupyter",
             "pytest",
