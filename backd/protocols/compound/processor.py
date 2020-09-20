@@ -264,9 +264,7 @@ class CompoundProcessor(Processor):
         self, state: State, _event_address: str, args: dict
     ):
         # virtual event generated when Oracle DSValue is updated
-        oracle = state.oracles.get_oracle(
-            "0x02557a5e05defeffd4cae6d83ea3d173b272c904"
-        )  # oracle version 1
+        oracle = state.oracles.get_oracle(constants.PRICE_V1_ORACLE_ADDRESS)
         value = int(args["newPriceMantissa"])
         for ctoken in args["tokens"]:
             oracle.update_price(ctoken, value, inverted=True)
