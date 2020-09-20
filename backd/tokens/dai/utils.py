@@ -21,5 +21,7 @@ def compute_apy(dsr: Union[int, str, Decimal, Decimal128]):
 
 
 def fetch_dsr_rates():
-    return [{"block": row["block"], "rate": row["rate"].to_decimal()}
-             for row in db.dsr.find()]
+    return [
+        {"blockNumber": row["blockNumber"], "rate": row["rate"].to_decimal()}
+        for row in db.dsr.find()
+    ]

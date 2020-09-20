@@ -11,7 +11,9 @@ from backd.db import db
 
 parser = argparse.ArgumentParser(prog="store-usdc-prices")
 parser.add_argument("input", help="path to the jsonl file with USDC prices")
-parser.add_argument("-c", "--collection", default="ds_values", help="collection to store values")
+parser.add_argument(
+    "-c", "--collection", default="ds_values", help="collection to store values"
+)
 parser.add_argument("-a", "--address", required=True, help="address of the contract")
 
 
@@ -29,11 +31,13 @@ def import_ds_values(input_file, address, collection):
                 price = "0"
             if price != current_price:
                 current_price = price
-                collection.insert_one({
-                    "blockNumber": parsed["block"],
-                    "price": Decimal128(Decimal(int(current_price, 16))),
-                    "address": address,
-                })
+                collection.insert_one(
+                    {
+                        "blockNumber": parsed["block"],
+                        "price": Decimal128(Decimal(int(current_price, 16))),
+                        "address": address,
+                    }
+                )
 
 
 def main():

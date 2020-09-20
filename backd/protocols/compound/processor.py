@@ -13,7 +13,6 @@ from ...entities import Market
 from .entities import CompoundState as State, CDaiMarket
 from ...logger import logger
 from ...hook import Hooks
-from .hooks import DSRHook
 from . import constants
 
 
@@ -37,8 +36,6 @@ class CompoundProcessor(Processor):
         self.markets_metadata = {
             market["underlying_address"]: market for market in markets
         }
-        dsr_hook = DSRHook()
-        hooks.hooks.insert(0, dsr_hook)
         super().__init__(hooks=hooks)
 
     def _process_event(self, state, event):
@@ -55,101 +52,76 @@ class CompoundProcessor(Processor):
             logger.error("error while processing %s", event)
             raise e
 
-    def process_new_comptroller(
-        self, state: State, event_address: str, event_values: dict
-    ):
+    def process_new_comptroller(self, state: State, event_address: str, args: dict):
         # NOTE: process_new_comptroller is always the first event emitted in a new market
-        try:
-            market = state.markets.find_by_address(event_address)
-        except ValueError:
-            if event_address == constants.CDAI_ADDRESS:
-                market = CDaiMarket(event_address)
-            else:
-                market = Market(event_address)
-            state.markets.add_market(market)
-        market.comptroller_address = event_values["newComptroller"]
+        market = self._find_or_add_market(state, event_address)
+        market.comptroller_address = args["newComptroller"]
 
-    def process_new_market_interest_rate_model(
+    def process_new_market_interest_rate_model(  # pylint: disable=invalid-name
         self,
-        state: State,  # pylint: disable=invalid-name
+        state: State,
         event_address: str,
-        event_values: dict,
+        args: dict,
     ):
         market = state.markets.find_by_address(event_address)
-        market.interest_rate_model = event_values["newInterestRateModel"]
+        market.interest_rate_model = args["newInterestRateModel"]
         state.interest_rate_models.create_model(market.interest_rate_model)
 
-    def process_new_reserve_factor(
-        self, state: State, event_address: str, event_values: dict
-    ):
+    def process_new_reserve_factor(self, state: State, event_address: str, args: dict):
         market = state.markets.find_by_address(event_address)
-        factor = int(event_values["newReserveFactorMantissa"]) / FACTORS_DIVISOR
+        factor = int(args["newReserveFactorMantissa"]) / FACTORS_DIVISOR
         assert 0 <= factor <= 1, f"close factor must be between 0 and 1, not {factor}"
         market.reserve_factor = factor
 
-    def process_new_implementation(
-        self, state: State, event_address: str, event_values: dict
-    ):
+    def process_new_implementation(self, state: State, event_address: str, args: dict):
         # need to handle DSR
         if event_address != constants.CDAI_ADDRESS:
             return
         market: CDaiMarket = state.markets.find_by_address(event_address)
-        new_implementation = event_values["newImplementation"]
+        new_implementation = args["newImplementation"]
         if new_implementation != constants.CDAI_DSR_IMPLEMENTATION:
             return
         market.dsr_active = True
 
-    def process_new_close_factor(
-        self, state: State, _event_address: str, event_values: dict
-    ):
-        factor = int(event_values["newCloseFactorMantissa"]) / FACTORS_DIVISOR
+    def process_new_close_factor(self, state: State, _event_address: str, args: dict):
+        factor = int(args["newCloseFactorMantissa"]) / FACTORS_DIVISOR
         assert 0 <= factor <= 1, f"close factor must be between 0 and 1, not {factor}"
         state.close_factor = factor
 
     def process_new_collateral_factor(
-        self, state: State, _event_address: str, event_values: dict
+        self, state: State, _event_address: str, args: dict
     ):
-        market = state.markets.find_by_address(event_values["cToken"])
+        market = state.markets.find_by_address(args["cToken"])
         market.collateral_factor = (
-            int(event_values["newCollateralFactorMantissa"]) / FACTORS_DIVISOR
+            int(args["newCollateralFactorMantissa"]) / FACTORS_DIVISOR
         )
 
-    def process_market_listed(
-        self, state: State, _event_address: str, event_values: dict
-    ):
-        market = state.markets.find_by_address(event_values["cToken"])
+    def process_market_listed(self, state: State, _event_address: str, args: dict):
+        market = state.markets.find_by_address(args["cToken"])
         market.listed = True
 
-    def process_market_entered(
-        self, state: State, _event_address: str, event_values: dict
-    ):
-        market = state.markets.find_by_address(event_values["cToken"])
-        market.users[event_values["account"]].entered = True
+    def process_market_entered(self, state: State, _event_address: str, args: dict):
+        market = state.markets.find_by_address(args["cToken"])
+        market.users[args["account"]].entered = True
 
-    def process_market_exited(
-        self, state: State, _event_address: str, event_values: dict
-    ):
-        market = state.markets.find_by_address(event_values["cToken"])
-        market.users[event_values["account"]].entered = False
+    def process_market_exited(self, state: State, _event_address: str, args: dict):
+        market = state.markets.find_by_address(args["cToken"])
+        market.users[args["account"]].entered = False
 
-    def process_mint(self, state: State, event_address: str, event_values: dict):
+    def process_mint(self, state: State, event_address: str, args: dict):
         market = state.markets.find_by_address(event_address)
-        mint_amount = int(event_values["mintAmount"])
+        mint_amount = int(args["mintAmount"])
 
         # NOTE: ERC20 tokens are handled through the transfer event
         if event_address == constants.CETH_ADDRESS:
             market.balances.total_underlying += mint_amount
 
-        # # NOTE: CDAI uses DSR so Transfer comes from/to NULL address
-        # if self._should_handle_dsr(market):
-        #     market.dsr_amount += mint_amount
+        market.balances.token_balance += int(args["mintTokens"])
 
-        market.balances.token_balance += int(event_values["mintTokens"])
-
-    def process_redeem(self, state: State, event_address: str, event_values: dict):
+    def process_redeem(self, state: State, event_address: str, args: dict):
         market = state.markets.find_by_address(event_address)
-        redeem_amount = int(event_values["redeemAmount"])
-        redeem_tokens = int(event_values["redeemTokens"])
+        redeem_amount = int(args["redeemAmount"])
+        redeem_tokens = int(args["redeemTokens"])
 
         assert (
             market.balances.token_balance >= redeem_tokens
@@ -164,21 +136,18 @@ class CompoundProcessor(Processor):
 
         # NOTE: CDAI uses DSR so Transfer comes from NULL address
         if self._should_handle_dsr(market):
-            # assert (
-            #     market.dsr_amount >= redeem_amount
-            # ), f"dsr_amount can never be negative, {market.dsr_amount} < {redeem_amount}"
-            market.dsr_amount -= redeem_amount
+            market.transfer_out(redeem_amount)
 
         market.balances.token_balance -= redeem_tokens
 
-    def process_transfer(self, state: State, event_address: str, event_values: dict):
+    def process_transfer(self, state: State, event_address: str, args: dict):
         try:
             market = state.markets.find_by_address(event_address)
         except ValueError:
-            return self._process_token_transfer(state, event_address, event_values)
-        amount = int(event_values["amount"])
+            return self._process_token_transfer(state, event_address, args)
+        amount = int(args["amount"])
 
-        from_ = event_values["from"]
+        from_ = args["from"]
         from_balances = market.users[from_].balances
         if from_ != event_address:
             assert (
@@ -186,16 +155,14 @@ class CompoundProcessor(Processor):
             ), f"token balance can never be negative, {from_balances.token_balance} < {amount}"
             from_balances.token_balance -= amount
 
-        to = event_values["to"]
+        to = args["to"]
         if to != event_address:
             market.users[to].balances.token_balance += amount
 
-    def _process_token_transfer(
-        self, state: State, event_address: str, event_values: dict
-    ):
-        address_from = get_any_key(event_values, ["from", "_from", "src"])
-        address_to = get_any_key(event_values, ["to", "_to", "dst"])
-        amount = int(get_any_key(event_values, ["amount", "value", "wad", "_value"]))
+    def _process_token_transfer(self, state: State, event_address: str, args: dict):
+        address_from = get_any_key(args, ["from", "_from", "src"])
+        address_to = get_any_key(args, ["to", "_to", "dst"])
+        amount = int(get_any_key(args, ["amount", "value", "wad", "_value"]))
 
         market_meta = self.markets_metadata.get(event_address)
         if not market_meta:
@@ -209,15 +176,19 @@ class CompoundProcessor(Processor):
             ), f"total supplied can never be negative, {cmarket.balances.total_underlying} < {amount}"
             cmarket.balances.total_underlying -= amount
             if address_to == constants.NULL_ADDRESS:
-                cmarket.dsr_amount += amount
+                cmarket.transfer_in(amount)
 
         if cmarket_address == address_to:
             cmarket.balances.total_underlying += amount
 
-    def process_borrow(self, state: State, event_address: str, event_values: dict):
+    def process_chi_updated(self, state: State, _event_address: str, args: dict):
+        market = self._find_or_add_market(state, constants.CDAI_ADDRESS)
+        market.chi = int(args["chi"])
+
+    def process_borrow(self, state: State, event_address: str, args: dict):
         market = state.markets.find_by_address(event_address)
-        amount = int(event_values["borrowAmount"])
-        market.balances.total_borrowed = int(event_values["totalBorrows"])
+        amount = int(args["borrowAmount"])
+        market.balances.total_borrowed = int(args["totalBorrows"])
 
         # NOTE: ERC20 tokens are handled through the transfer event
         if event_address == constants.CETH_ADDRESS:
@@ -228,22 +199,15 @@ class CompoundProcessor(Processor):
 
         # NOTE: CDAI uses DSR so Transfer comes from NULL address
         if self._should_handle_dsr(market):
-            # assert (
-            #     market.dsr_amount >= amount
-            # ), f"dsr_amount can never be negative, {market.dsr_amount} < {amount}"
-            market.dsr_amount -= amount
+            market.transfer_out(amount)
 
-        borrower = event_values["borrower"]
+        borrower = args["borrower"]
         self.update_user_borrow(market, borrower)
-        market.users[borrower].balances.total_borrowed += int(
-            event_values["borrowAmount"]
-        )
+        market.users[borrower].balances.total_borrowed += int(args["borrowAmount"])
 
-    def process_repay_borrow(
-        self, state: State, event_address: str, event_values: dict
-    ):
-        borrower = event_values["borrower"]
-        amount = int(event_values["repayAmount"])
+    def process_repay_borrow(self, state: State, event_address: str, args: dict):
+        borrower = args["borrower"]
+        amount = int(args["repayAmount"])
         market = state.markets.find_by_address(event_address)
         self.update_user_borrow(market, borrower)
         user_balances = market.users[borrower].balances
@@ -254,95 +218,71 @@ class CompoundProcessor(Processor):
             user_balances.total_borrowed >= amount
         ), f"borrow can never be negative, {user_balances.total_borrowed} < {amount}"
 
-        market.balances.total_borrowed = int(event_values["totalBorrows"])
+        market.balances.total_borrowed = int(args["totalBorrows"])
         # NOTE: ERC20 tokens are handled through the transfer event
         if event_address == constants.CETH_ADDRESS:
             market.balances.total_underlying += amount
 
-        # # NOTE: CDAI uses DSR so Transfer comes from NULL address
-        # if self._should_handle_dsr(market):
-        #     market.dsr_amount += amount
-
         user_balances.total_borrowed -= amount
 
-    def process_liquidate_borrow(
-        self, state: State, event_address: str, event_values: dict
-    ):
+    def process_liquidate_borrow(self, state: State, event_address: str, args: dict):
         # NOTE: repay and transfer will be emitted with each liquidation
         pass
 
-    def process_reserves_added(
-        self, state: State, event_address: str, event_values: dict
-    ):
+    def process_reserves_added(self, state: State, event_address: str, args: dict):
         market = state.markets.find_by_address(event_address)
-        market.reserves += int(event_values["addAmount"])
+        market.reserves += int(args["addAmount"])
 
-    def process_reserves_reduced(
-        self, state: State, event_address: str, event_values: dict
-    ):
+    def process_reserves_reduced(self, state: State, event_address: str, args: dict):
         market = state.markets.find_by_address(event_address)
         assert market.reserves >= int(
-            event_values["reduceAmount"]
-        ), f"reserves can never be negative, {market.reserves} < {event_values['reduceAmount']}"
-        market.reserves -= int(event_values["reduceAmount"])
+            args["reduceAmount"]
+        ), f"reserves can never be negative, {market.reserves} < {args['reduceAmount']}"
+        market.reserves -= int(args["reduceAmount"])
 
-    def process_new_price_oracle(
-        self, state: State, _event_address: str, event_values: dict
-    ):
-        address = event_values["newPriceOracle"]
+    def process_new_price_oracle(self, state: State, _event_address: str, args: dict):
+        address = args["newPriceOracle"]
         state.oracles.create_oracle(address)
         state.oracles.current_address = address
 
-    def process_price_posted(
-        self, state: State, event_address: str, event_values: dict
-    ):
+    def process_price_posted(self, state: State, event_address: str, args: dict):
         oracle = state.oracles.get_oracle(event_address)
-        value = int(event_values["newPriceMantissa"])
-        oracle.update_price(event_values["asset"], value)
+        value = int(args["newPriceMantissa"])
+        oracle.update_price(args["asset"], value)
 
-    def process_price_updated(
-        self, state: State, event_address: str, event_values: dict
-    ):
+    def process_price_updated(self, state: State, event_address: str, args: dict):
         oracle = state.oracles.get_oracle(event_address)
-        value = int(event_values["price"])
-        oracle.update_price(event_values["symbol"], value)
+        value = int(args["price"])
+        oracle.update_price(args["symbol"], value)
 
-    def process_sai_price_set(
-        self, state: State, event_address: str, event_values: dict
-    ):
+    def process_sai_price_set(self, state: State, event_address: str, args: dict):
         oracle = state.oracles.get_oracle(event_address)
-        value = int(event_values["newPriceMantissa"])
+        value = int(args["newPriceMantissa"])
         oracle.sai_price = value
 
     def process_inverted_price_posted(
-        self, state: State, _event_address: str, event_values: dict
+        self, state: State, _event_address: str, args: dict
     ):
         # virtual event generated when Oracle DSValue is updated
         oracle = state.oracles.get_oracle(
             "0x02557a5e05defeffd4cae6d83ea3d173b272c904"
         )  # oracle version 1
-        value = int(event_values["newPriceMantissa"])
-        for ctoken in event_values["tokens"]:
+        value = int(args["newPriceMantissa"])
+        for ctoken in args["tokens"]:
             oracle.update_price(ctoken, value, inverted=True)
 
-    def process_new_interest_params(
-        self, state: State, event_address: str, event_values: dict
-    ):
+    def process_new_interest_params(self, state: State, event_address: str, args: dict):
         try:
             model = state.interest_rate_models.get_model(event_address)
         except KeyError:
             model = state.interest_rate_models.create_model(event_address)
-        model.update_params(event_values)
+        model.update_params(args)
 
-    def process_accrue_interest(
-        self, state: State, event_address: str, event_values: dict
-    ):
+    def process_accrue_interest(self, state: State, event_address: str, args: dict):
         market = state.markets.find_by_address(event_address)
-        market.balances.total_borrowed = int(event_values["totalBorrows"])
-        market.borrow_index = int(event_values["borrowIndex"])
-        market.reserves += int(
-            int(event_values["interestAccumulated"]) * market.reserve_factor
-        )
+        market.balances.total_borrowed = int(args["totalBorrows"])
+        market.borrow_index = int(args["borrowIndex"])
+        market.reserves += int(int(args["interestAccumulated"]) * market.reserve_factor)
 
     def update_user_borrow(self, market: Market, user_address: str):
         user = market.users[user_address]
@@ -352,3 +292,14 @@ class CompoundProcessor(Processor):
 
     def _should_handle_dsr(self, market: Market) -> bool:
         return isinstance(market, CDaiMarket) and market.dsr_active
+
+    def _find_or_add_market(self, state: State, address: str) -> Market:
+        try:
+            market = state.markets.find_by_address(address)
+        except ValueError:
+            if address == constants.CDAI_ADDRESS:
+                market = CDaiMarket(address)
+            else:
+                market = Market(address)
+            state.markets.add_market(market)
+        return market

@@ -23,10 +23,12 @@ def create_indices():
     for key in ["minter", "redeemer", "borrower"]:
         db.events.create_index(f"returnValues.{key}")
 
-    db.dsr.create_index("block", unique=True)
+    db.dsr.create_index("blockNumber", unique=True)
 
-    db.ds_values.create_index("block", unique=True)
+    db.ds_values.create_index("blockNumber", unique=True)
     db.ds_values.create_index("address")
+
+    db.chi_values.create_index("blockNumber", unique=True)
 
 
 def iterate_events():

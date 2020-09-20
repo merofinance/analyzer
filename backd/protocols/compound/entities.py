@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from ...entities import State, Market
 from ...tokens.dai.dsr import DSR
+from . import constants
 from .interest_rate_models import InterestRateModel
 
 
@@ -11,7 +12,9 @@ EXP_SCALE = int(1e18)
 
 
 class InterestRateModels:
-    def __init__(self, dsr: DSR, interest_rate_models: Dict[str, InterestRateModel] = None):
+    def __init__(
+        self, dsr: DSR, interest_rate_models: Dict[str, InterestRateModel] = None
+    ):
         if interest_rate_models is None:
             interest_rate_models = {}
         self.dsr = dsr
@@ -24,8 +27,9 @@ class InterestRateModels:
         address = address.lower()
         if address not in self.interest_rate_models:
             available = ", ".join(self.interest_rate_models.keys())
-            raise KeyError(f"no model found at address {address}, "
-                           f"available: {available}")
+            raise KeyError(
+                f"no model found at address {address}, " f"available: {available}"
+            )
         return self.interest_rate_models[address]
 
     def create_model(self, address: str):
@@ -40,11 +44,22 @@ class InterestRateModels:
 
 @dataclass
 class CDaiMarket(Market):
-    dsr_amount: int = 0
     dsr_active: bool = False
+    pie: int = 0
+    chi: int = 10 ** 27
 
     def get_cash(self):
-        return self.balances.total_underlying + self.dsr_amount
+        return self.balances.total_underlying + self.current_pie
+
+    def transfer_in(self, amount: int):
+        self.pie += amount * constants.RAY // self.chi
+
+    def transfer_out(self, amount: int):
+        self.pie -= amount * constants.RAY // self.chi + 1
+
+    @property
+    def current_pie(self):
+        return self.pie * self.chi // constants.RAY
 
 
 @dataclass
@@ -74,15 +89,15 @@ class CompoundState(State):
             user_balances = market_user.balances
             exchange_rate = market.underlying_exchange_rate
             collateral_factor = market.collateral_factor
-            oracle_price = self.oracles.current.get_underlying_price(
-                market.address)
+            oracle_price = self.oracles.current.get_underlying_price(market.address)
 
-            tokens_to_ether_left = Decimal(
-                round(collateral_factor * exchange_rate)) / EXP_SCALE
+            tokens_to_ether_left = (
+                Decimal(round(collateral_factor * exchange_rate)) / EXP_SCALE
+            )
             tokens_to_ether = round(tokens_to_ether_left * oracle_price)
-            sum_collateral += tokens_to_ether * \
-                user_balances.token_balance // EXP_SCALE
-            sum_borrows += oracle_price * \
-                market_user.borrowed_at(market.borrow_index) // EXP_SCALE
+            sum_collateral += tokens_to_ether * user_balances.token_balance // EXP_SCALE
+            sum_borrows += (
+                oracle_price * market_user.borrowed_at(market.borrow_index) // EXP_SCALE
+            )
 
         return (sum_collateral, sum_borrows)

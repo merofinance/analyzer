@@ -8,7 +8,10 @@ import pytest
 
 from backd import settings
 from backd import constants
-from backd.protocols.compound.interest_rate_models import InterestRateModel, JumpRateModel
+from backd.protocols.compound.interest_rate_models import (
+    InterestRateModel,
+    JumpRateModel,
+)
 from backd.protocols.compound.oracles import UniswapAnchorView
 from backd.entities import Market, Balances, Markets, Oracle
 from backd.tokens.dai.dsr import DSR
@@ -22,8 +25,16 @@ MAIN_ORACLE = "0xAB23"
 BORROW_MARKET = "0xA123"
 BORROW_TOKEN = "0xB123"
 DUMMY_MARKETS_META = [
-    {"address": MAIN_MARKET.lower(), "underlying_address": MAIN_TOKEN.lower(), "underlying_symbol": "MAIN"},
-    {"address": BORROW_MARKET.lower(), "underlying_address": BORROW_TOKEN.lower(), "underlying_symbol": "BOR"},
+    {
+        "address": MAIN_MARKET.lower(),
+        "underlying_address": MAIN_TOKEN.lower(),
+        "underlying_symbol": "MAIN",
+    },
+    {
+        "address": BORROW_MARKET.lower(),
+        "underlying_address": BORROW_TOKEN.lower(),
+        "underlying_symbol": "BOR",
+    },
 ]
 
 
@@ -36,9 +47,12 @@ def compound_redeem_event():
 @pytest.fixture
 def markets():
     return Markets(
-        [Market("0xa234", balances=Balances(total_borrowed=1, total_underlying=2)),
-         Market("0x1A3B"),
-         Market("0xA123")])
+        [
+            Market("0xa234", balances=Balances(total_borrowed=1, total_underlying=2)),
+            Market("0x1A3B"),
+            Market("0xA123"),
+        ]
+    )
 
 
 @pytest.fixture
@@ -55,9 +69,9 @@ def compound_dummy_events():
 @pytest.fixture
 def dummy_dsr_rates():
     return [
-        {"block": 100, "rate": D("1.0") * 10 ** constants.DSR_DECIMALS},
-        {"block": 105, "rate": D("1.1") * 10 ** constants.DSR_DECIMALS},
-        {"block": 110, "rate": D("1.5") * 10 ** constants.DSR_DECIMALS},
+        {"blockNumber": 100, "rate": D("1.0") * 10 ** constants.DSR_DECIMALS},
+        {"blockNumber": 105, "rate": D("1.1") * 10 ** constants.DSR_DECIMALS},
+        {"blockNumber": 110, "rate": D("1.5") * 10 ** constants.DSR_DECIMALS},
     ]
 
 
@@ -82,9 +96,8 @@ def get_event(compound_dummy_events, name, index=0):
 
 
 def get_events_until(compound_dummy_events, name, index=0):
-    indices = [i for i, e in enumerate(
-        compound_dummy_events) if e["event"] == name]
-    return compound_dummy_events[:indices[index] + 1]
+    indices = [i for i, e in enumerate(compound_dummy_events) if e["event"] == name]
+    return compound_dummy_events[: indices[index] + 1]
 
 
 @InterestRateModel.register("0xbae0")
