@@ -41,6 +41,7 @@ class InterestRateModels:
 @dataclass
 class CDaiMarket(Market):
     dsr_amount: int = 0
+    dsr_active: bool = False
 
     def get_cash(self):
         return self.balances.total_underlying + self.dsr_amount

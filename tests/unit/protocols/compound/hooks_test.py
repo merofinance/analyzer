@@ -2,7 +2,7 @@ from backd.protocols.compound.hooks import DSRHook
 from backd.protocols.compound.entities import CompoundState, CDaiMarket
 from backd.entities import PointInTime
 from backd.tokens.dai.dsr import DSR
-from backd import constants
+from backd.protocols.compound import constants
 
 
 def test_dsr_hook(dummy_dsr_rates):

@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from backd.protocols.compound import oracles
 from backd.entities import Markets, Market
-from backd.constants import COMPOUND_MARKETS
+from backd.protocols.compound.constants import MARKETS
 
 
 def test_is_token():
@@ -28,7 +28,7 @@ def test_price_oracle_v1():
 
 
 def test_price_oracle_v1_underlying_price():
-    sample_market = COMPOUND_MARKETS[0]
+    sample_market = MARKETS[0]
     address = sample_market["address"]
     underlying_address = sample_market["underlying_address"]
     oracle = oracles.PriceOracleV1(Markets())
@@ -127,4 +127,4 @@ def ctoken_address(symbol: str) -> str:
 
 
 def find_market(symbol: str) -> dict:
-    return [m for m in COMPOUND_MARKETS if m["underlying_symbol"] == symbol][0]
+    return [m for m in MARKETS if m["underlying_symbol"] == symbol][0]
