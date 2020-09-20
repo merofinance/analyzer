@@ -2,12 +2,12 @@ from enum import Enum
 from dataclasses import dataclass
 
 
-from ... import constants
+from . import constants
 from ...entities import Oracle
 from ...logger import logger
 
 
-MARKETS_BY_CTOKEN = {m["address"]: m for m in constants.COMPOUND_MARKETS}
+MARKETS_BY_CTOKEN = {m["address"]: m for m in constants.MARKETS}
 
 USDC_ORACLE_KEY = "0x0000000000000000000000000000000000000001"
 DAI_ORACLE_KEY = "0x0000000000000000000000000000000000000002"
@@ -113,9 +113,6 @@ _sai_prices = {}
 
 @Oracle.register("0xda17fbeda95222f331cb1d252401f4b44f49f7a0")
 class PriceOracleV15(PriceOracleV1):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def get_underlying_price(self, ctoken: str) -> int:
         if is_token(ctoken, "ETH"):
             return 1e18
@@ -286,7 +283,7 @@ class UniswapAnchorView(Oracle):
         ]
         self._config_by_ctoken = {c.ctoken: c for c in self.token_configs}
         self._token_to_underlying = {m["underlying_symbol"]: m["underlying_address"]
-                                     for m in constants.COMPOUND_MARKETS}
+                                     for m in constants.MARKETS}
 
     def get_underlying_price(self, ctoken: str) -> int:
         # Comptroller needs prices in the format: ${raw price} * 1e(36 - baseUnit)

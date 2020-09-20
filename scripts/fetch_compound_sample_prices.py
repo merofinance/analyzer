@@ -10,7 +10,7 @@ import pymongo
 
 from backd.db import db
 from backd.entities import Oracle
-from backd import constants
+from backd.protocols.compound import constants
 from backd.logger import logger
 
 
@@ -34,7 +34,7 @@ GET_UNDERLYING_PRICE_ABI = {
     "type": "function"
 }
 CTOKENS = [Web3.toChecksumAddress(market["address"])
-           for market in constants.COMPOUND_MARKETS]
+           for market in constants.MARKETS]
 
 
 WEB3_URI = os.environ.get(

@@ -1,6 +1,6 @@
 from backd import normalizer
 
-from tests.conftest import get_event
+from tests.fixtures import get_event
 
 
 def test_normalize_value():
@@ -9,7 +9,9 @@ def test_normalize_value():
 
 def test_normalize_event_values(compound_dummy_events):
     new_comptroller_event = get_event(compound_dummy_events, "NewComptroller")
-    normalized_values = normalizer.normalize_event_values(new_comptroller_event["returnValues"])
+    normalized_values = normalizer.normalize_event_values(
+        new_comptroller_event["returnValues"]
+    )
     assert normalized_values["newComptroller"] == "0xc2a1"
 
 

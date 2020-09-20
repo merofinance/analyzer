@@ -13,13 +13,15 @@ setup(
     extras_require={
         "dev": [
             "pylint",
+            "black",
+            "pytest-profiling",
             "ipython",
             "jupyter",
             "pytest",
             "web3",
         ]
     },
-    entry_points = {
+    entry_points={
         "console_scripts": ["backd=backd.cli:run"],
-    }
+    },
 )

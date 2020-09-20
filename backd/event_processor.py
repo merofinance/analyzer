@@ -12,9 +12,13 @@ class Processor(ABC, BaseFactory):
     def __init__(self, hooks: Hooks = None):
         self.hooks = hooks
 
-    def process_events(self, state: State, events: Iterable[dict], total_count: int = None):
-        for event in tqdm(events, total=total_count):
+    def process_events(self, state: State, events: Iterable[dict], pbar: tqdm = None):
+        for event in events:
             self.process_event(state, event)
+            if pbar:
+                pbar.update()
+        if self.hooks:
+            self.hooks.finalize_hooks(state)
 
     def process_event(self, state: State, event: dict):
         if "event" not in event:
@@ -22,10 +26,10 @@ class Processor(ABC, BaseFactory):
         state.last_event_time = state.current_event_time
         state.current_event_time = PointInTime.from_event(event)
         if self.hooks:
-            self.hooks.execute_prehooks(state)
+            self.hooks.execute_hooks_start(state, event)
         self._process_event(state, event)
         if self.hooks:
-            self.hooks.execute_posthooks(state)
+            self.hooks.execute_hooks_end(state, event)
 
     @abstractmethod
     def _process_event(self, state: State, event: dict):
