@@ -64,13 +64,17 @@ class Hooks:
         return [v[1] for v in self.hooks_info]
 
     def execute_hooks_start(self, state: State, event: dict):
-        if self._last_transaction != state.current_event_time.transaction_index:
+        if (
+            self._last_transaction != state.current_event_time.transaction_index
+            and self._last_transaction is not None
+        ):
             for hook in self.hooks:
                 hook.transaction_end(state, self._last_block, self._last_transaction)
 
         if self._last_block != state.current_event_time.block_number:
-            for hook in self.hooks:
-                hook.block_end(state, self._last_block)
+            if self._last_block is not None:
+                for hook in self.hooks:
+                    hook.block_end(state, self._last_block)
             self._last_block = state.current_event_time.block_number
             for hook in self.hooks:
                 hook.block_start(state, self._last_block)
