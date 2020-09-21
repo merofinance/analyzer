@@ -78,15 +78,13 @@ def test_price_oracle_v14():
     oracle.update_price(oracle.maker_usd_oracle_key, 6505757595471992)
     oracle.update_price(oracles.USDC_ORACLE_KEY, 6543771170404755000000000000)
     oracle.update_price(oracles.DAI_ORACLE_KEY, 6509366069108860)
-    assert oracle.get_underlying_price(
-        ctoken_address("SAI")) == 6471552357658807
-    assert oracle.get_underlying_price(
-        ctoken_address("DAI")) == 6471552357658807
+    assert oracle.get_underlying_price(ctoken_address("SAI")) == 6471552357658807
+    assert oracle.get_underlying_price(ctoken_address("DAI")) == 6471552357658807
 
 
 def test_price_oracle_v15():
     oracle = oracles.PriceOracleV15(Markets())
-    assert oracle.get_underlying_price(ctoken_address("ETH")) == int(1e18)
+    assert oracle.get_underlying_price(ctoken_address("ETH")) == 10 ** 18
     oracle.update_price(oracles.USDC_ORACLE_KEY, 101)
     oracle.update_price(oracles.DAI_ORACLE_KEY, 99)
     assert oracle.get_underlying_price(ctoken_address("USDC")) == 101
@@ -113,13 +111,15 @@ def test_price_oracle_v16():
 
 def test_uniswap_anchor_view():
     oracle = oracles.UniswapAnchorView(Markets())
-    oracle.update_price("ETH", int(1e19))
+    oracle.update_price("ETH", 10 ** 19)
     assert oracle.get_underlying_price(ctoken_address("ETH")) == 10 ** 31
     assert oracle.get_underlying_price(ctoken_address("USDT")) == 10 ** 30
     assert oracle.get_underlying_price(ctoken_address("USDC")) == 10 ** 30
     # eth_price * fixed_price * 10 ** (30 - 18 - 18)
-    assert oracle.get_underlying_price(ctoken_address(
-        "SAI")) == int(1e19) * 5285000000000000 // int(1e6)
+    assert (
+        oracle.get_underlying_price(ctoken_address("SAI"))
+        == 10 ** 19 * 5285000000000000 // 10 ** 6
+    )
 
 
 def ctoken_address(symbol: str) -> str:

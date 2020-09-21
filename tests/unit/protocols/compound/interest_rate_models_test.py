@@ -21,15 +21,16 @@ def test_jump_rate_model():
     model = JumpRateModel()
 
     assert model.get_borrow_rate(2000, 1500, 1000, BLOCK_NUMBER) == 15854895991
-    assert model.get_supply_rate(2000, 1500, 1000, int(1e17), BLOCK_NUMBER) == 8561643834
+    assert model.get_supply_rate(2000, 1500, 1000, 10 ** 17, BLOCK_NUMBER) == 8561643834
     assert model.get_utilization_rate(2000, 1500, 1000) == 600000000000000000
+
 
 def test_jump_rate_model_v2():
     # https://etherscan.io/address/0xfb564da37b41b2f6b6edcc3e56fbf523bd9f2012#readContract
     model = JumpRateModelV2()
 
     assert model.get_borrow_rate(2000, 1500, 1000, BLOCK_NUMBER) == 14269406392
-    assert model.get_supply_rate(2000, 1500, 1000, int(1e17), BLOCK_NUMBER) == 7705479451
+    assert model.get_supply_rate(2000, 1500, 1000, 10 ** 17, BLOCK_NUMBER) == 7705479451
     assert model.get_utilization_rate(2000, 1500, 1000) == 600000000000000000
 
 
@@ -38,7 +39,9 @@ def test_usdt_rate_model():
     model = USDTRateModel()
 
     assert model.get_borrow_rate(2000, 1500, 1000, BLOCK_NUMBER) == 66590563165
-    assert model.get_supply_rate(2000, 1500, 1000, int(1e17), BLOCK_NUMBER) == 35958904108
+    assert (
+        model.get_supply_rate(2000, 1500, 1000, 10 ** 17, BLOCK_NUMBER) == 35958904108
+    )
     assert model.get_utilization_rate(2000, 1500, 1000) == 600000000000000000
 
 
@@ -80,34 +83,40 @@ def test_base500bps_slope1500bps_rate_model():
 def test_dai_interest_rate_model(dsr_rates):
     # https://etherscan.io/address/0xec163986cC9a6593D6AdDcBFf5509430D348030F#readContract
     dsr = DSR(dsr_rates)
-    model = DAIInterestRateModel(dsr,
-                                 base_rate_per_block=0,
-                                 multiplier_per_block=264248265,
-                                 jump_multiplier_per_block=570776255707)
+    model = DAIInterestRateModel(
+        dsr,
+        base_rate_per_block=0,
+        multiplier_per_block=264248265,
+        jump_multiplier_per_block=570776255707,
+    )
 
     assert model.get_borrow_rate(2000, 1500, 1000, BLOCK_NUMBER) == 158548959
-    assert model.get_supply_rate(2000, 1500, 1000, int(1e17), BLOCK_NUMBER) == 85616437
+    assert model.get_supply_rate(2000, 1500, 1000, 10 ** 17, BLOCK_NUMBER) == 85616437
 
-    old_block = 9684437 # dsr_per_block = 18655209840
-    model = DAIInterestRateModel(dsr,
-                                 base_rate_per_block=19637062989,
-                                 multiplier_per_block=264248265,
-                                 jump_multiplier_per_block=570776255707)
+    old_block = 9684437  # dsr_per_block = 18655209840
+    model = DAIInterestRateModel(
+        dsr,
+        base_rate_per_block=19637062989,
+        multiplier_per_block=264248265,
+        jump_multiplier_per_block=570776255707,
+    )
     assert model.dsr_per_block(old_block) == 18655209840
     assert model.get_borrow_rate(2000, 1500, 1000, old_block) == 19795611948
-    assert model.get_supply_rate(2000, 1500, 1000, int(1e17), old_block) == 25613798323
+    assert model.get_supply_rate(2000, 1500, 1000, 10 ** 17, old_block) == 25613798323
 
 
 def test_dai_interest_rate_model_v2(dsr_rates):
     # https://etherscan.io/address/0x000000007675b5E1dA008f037A0800B309e0C493#readContract
     dsr = DSR(dsr_rates)
-    model = DAIInterestRateModelV2(dsr,
-                                   base_rate_per_block=0,
-                                   multiplier_per_block=10569930661,
-                                   jump_multiplier_per_block=570776255707)
+    model = DAIInterestRateModelV2(
+        dsr,
+        base_rate_per_block=0,
+        multiplier_per_block=10569930661,
+        jump_multiplier_per_block=570776255707,
+    )
 
     assert model.get_borrow_rate(2000, 1500, 1000, BLOCK_NUMBER) == 6341958396
-    assert model.get_supply_rate(2000, 1500, 1000, int(1e17), BLOCK_NUMBER) == 3424657533
+    assert model.get_supply_rate(2000, 1500, 1000, 10 ** 17, BLOCK_NUMBER) == 3424657533
 
 
 def test_dai_interest_rate_model_v3(dsr_rates):
@@ -116,7 +125,7 @@ def test_dai_interest_rate_model_v3(dsr_rates):
     model = DAIInterestRateModelV3(dsr)
 
     assert model.get_borrow_rate(2000, 1500, 1000, BLOCK_NUMBER) == 14269406392
-    assert model.get_supply_rate(2000, 1500, 1000, int(1e17), BLOCK_NUMBER) == 7705479451
+    assert model.get_supply_rate(2000, 1500, 1000, 10 ** 17, BLOCK_NUMBER) == 7705479451
 
 
 def test_interest_rate_model_update_params():

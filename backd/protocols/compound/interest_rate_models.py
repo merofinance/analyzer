@@ -6,8 +6,7 @@ import stringcase
 from ...base_factory import BaseFactory
 from ...tokens.dai.dsr import DSR
 
-
-EXP_SCALE = int(1e18)
+EXP_SCALE = 10 ** 18
 
 
 def get_exp(num: int, denom: int) -> int:

@@ -241,7 +241,7 @@ def test_liquidate_borrow(
     collateral_market = state.markets.find_by_address(MAIN_MARKET)
     processor.process_events(state, events)
 
-    interests = 80 * 1033291579335879146 // int(1e18) - 80
+    interests = 80 * 1033291579335879146 // 10 ** 18 - 80
 
     assert collateral_market.balances.token_balance == 65
     assert collateral_market.balances.total_underlying == 60
@@ -295,7 +295,7 @@ def test_price_updated(
     assert len(state.oracles) == 1
     ceth = "0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5"
     oracle = state.oracles.get_oracle("0xabab54")
-    assert oracle.get_underlying_price(ceth) == 100 * int(1e12)
+    assert oracle.get_underlying_price(ceth) == 100 * 10 ** 12
 
 
 def test_sai_price_set(processor: CompoundProcessor, state: State):

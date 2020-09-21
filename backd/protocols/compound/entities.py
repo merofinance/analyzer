@@ -7,7 +7,7 @@ from ...tokens.dai.dsr import DSR
 from . import constants
 from .interest_rate_models import InterestRateModel
 
-EXP_SCALE = int(1e18)
+EXP_SCALE = 10 ** 18
 
 
 class InterestRateModels:

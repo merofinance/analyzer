@@ -1,18 +1,16 @@
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
 
-
-from . import constants
 from ...entities import Oracle
 from ...logger import logger
-
+from . import constants
 
 MARKETS_BY_CTOKEN = {m["address"]: m for m in constants.MARKETS}
 
 USDC_ORACLE_KEY = "0x0000000000000000000000000000000000000001"
 DAI_ORACLE_KEY = "0x0000000000000000000000000000000000000002"
 
-ETH_BASE_UNIT = int(1e18)
+ETH_BASE_UNIT = 10 ** 18
 
 
 def is_token(ctoken: str, symbol: str) -> bool:
@@ -79,7 +77,7 @@ class PriceOracleV13(PriceOracleV1):
             return ETH_BASE_UNIT
 
         if is_token(ctoken, "USDC"):
-            return super().get_price(self.maker_usd_oracle_key) * int(1e12)
+            return super().get_price(self.maker_usd_oracle_key) * 10 ** 12
 
         if is_token(ctoken, "SAI"):
             return self._compute_dai_price()
@@ -89,7 +87,7 @@ class PriceOracleV13(PriceOracleV1):
     def _compute_dai_price(self) -> int:
         maker_usd_price = super().get_price(self.maker_usd_oracle_key)
         posted_usdc_price = super().get_price(USDC_ORACLE_KEY)
-        posted_scaled_dai_price = super().get_price(DAI_ORACLE_KEY) * int(1e12)
+        posted_scaled_dai_price = super().get_price(DAI_ORACLE_KEY) * 10 ** 12
         dai_usdc_ratio = posted_scaled_dai_price * ETH_BASE_UNIT // posted_usdc_price
 
         lower_bound = int(0.95e18)
@@ -111,11 +109,12 @@ class PriceOracleV14(PriceOracleV13):
 
 _sai_prices = {}
 
+
 @Oracle.register("0xda17fbeda95222f331cb1d252401f4b44f49f7a0")
 class PriceOracleV15(PriceOracleV1):
     def get_underlying_price(self, ctoken: str) -> int:
         if is_token(ctoken, "ETH"):
-            return 1e18
+            return 10 ** 18
 
         if is_token(ctoken, "USDC"):
             return self.get_price(USDC_ORACLE_KEY)
@@ -166,6 +165,7 @@ class TokenConfig:
 
 
 _uniswap_oracle_prices = {}
+
 
 @Oracle.register("0x9b8eb8b3d6e2e0db36f41455185fef7049a35cae")
 class UniswapAnchorView(Oracle):

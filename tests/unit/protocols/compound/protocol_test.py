@@ -33,7 +33,7 @@ def test_count_events(protocol: CompoundProtocol, compound_dummy_events):
 
 
 def test_iterate_events(protocol: CompoundProtocol, compound_dummy_events):
-    events = list(protocol.iterate_events(max_block=int(1e18)))
+    events = list(protocol.iterate_events(max_block=10 ** 18))
     # all "regular" events and the SaiPriceSet
     assert len(events) == len(compound_dummy_events) + 1
     assert all(

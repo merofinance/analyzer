@@ -37,7 +37,7 @@ class Balances(UserBalances):
 class MarketUser:
     balances: UserBalances = None
     entered: bool = False
-    borrow_index: int = int(1e18)
+    borrow_index: int = 10 ** 18
 
     def __post_init__(self):
         if self.balances is None:
@@ -58,7 +58,7 @@ class Market:
     listed: bool = False
     comptroller_address: str = None
     reserves: int = 0
-    borrow_index: int = int(1e18)
+    borrow_index: int = 10 ** 18
 
     def __post_init__(self):
         self.address = self.address.lower()
@@ -75,7 +75,7 @@ class Market:
         if self.balances.token_balance == 0:
             return 0
         numerator = self.get_cash() + self.balances.total_borrowed - self.reserves
-        return numerator * int(1e18) // self.balances.token_balance
+        return numerator * 10 ** 18 // self.balances.token_balance
 
     def compute_new_total_borrowed(self, new_index: int) -> int:
         return self.balances.total_borrowed * new_index // self.borrow_index

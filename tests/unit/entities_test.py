@@ -21,7 +21,7 @@ def test_point_in_time_order():
 
 def test_user_borrowed_at():
     user = MarketUser(balances=UserBalances(total_borrowed=100))
-    assert user.borrowed_at(int(11e17)) == 110
+    assert user.borrowed_at(11 * 10 ** 17) == 110
 
 
 def test_markets_find_market_by_address(markets: Markets):
@@ -81,5 +81,5 @@ def test_oracle_update_price():
     oracle = Oracle(Markets())
     oracle.update_price(asset, 100)
     assert oracle.get_price(asset) == 100
-    oracle.update_price(asset, int(2e18), inverted=True) # 2
-    assert oracle.get_price(asset) == int(5e17) # 0.5
+    oracle.update_price(asset, int(2e18), inverted=True)  # 2
+    assert oracle.get_price(asset) == int(5e17)  # 0.5
