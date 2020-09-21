@@ -14,8 +14,9 @@ def plot_borrowers_over_time(args: dict):
         for block, count in users_count.items()
         if count > 0 and block in block_dates
     ]
-    x = [block_dates[v[0]] for v in non_zero_users]
-    y = [v[1] for v in non_zero_users]
+    interval = int(args["options"].get("interval", 1))
+    x = [block_dates[v[0]] for v in non_zero_users[::interval]]
+    y = [v[1] for v in non_zero_users[::interval]]
     plt.xticks(rotation=45)
     plt.xlabel("Date")
     plt.ylabel("Number of borrowers")

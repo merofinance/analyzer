@@ -5,6 +5,15 @@ from . import executor
 from .db import create_indices
 from .protocol import Protocol
 
+
+class ParseKwargs(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, {})
+        for value in values:
+            key, value = value.split("=")
+            getattr(namespace, self.dest)[key] = value
+
+
 parser = argparse.ArgumentParser(
     prog="backd", description="Command-line interface for backd.fund"
 )
@@ -40,6 +49,9 @@ add_protocol_choice(plot_parser)
 plot_parser.add_argument("type", help="type of plot")
 plot_parser.add_argument("-s", "--state", required=True, help="state pickle file")
 plot_parser.add_argument("-o", "--output", help="plot output file")
+plot_parser.add_argument(
+    "--options", nargs="*", action=ParseKwargs, help="plot options"
+)
 
 
 def run_create_indices(_args):
