@@ -99,6 +99,7 @@ def store_leverage_spirals(
     the Block Number changes. A spiral has to contain the 'market' asset as
     collateral. Note: no repays of leverage spirals are recorded at the moment.
     """
+    spiral_events = []
     cursor = db.events.find(
         {"blockNumber": {"$gte": start_block, "$lte": end_block}}
     ).sort(
@@ -137,10 +138,7 @@ def store_leverage_spirals(
             # check if it is a spiral
             if is_spiral(candidate_spiral):
                 print("Spiral: ", candidate_spiral)
-                if os.path.exists(file):
-                    os.remove(file)
-                with open(file, "a") as f:
-                    json.dump(dataclasses.asdict(candidate_spiral), f)
+                spiral_events.append(dataclasses.asdict(candidate_spiral))
             last_block_number = event["blockNumber"]
             last_tx_index = event["transactionIndex"]
             candidate_spiral = Spiral(
@@ -156,6 +154,8 @@ def store_leverage_spirals(
         elif event["event"] == "Borrow":
             spiral_event = process_borrow_event(event)
             candidate_spiral.events.append(spiral_event)
+    with open(file, "w") as f:
+        json.dump(spiral_events, f)
 
 
 def process_mint_event(event: dict) -> SpiralEvent:
