@@ -67,7 +67,10 @@ class CompoundProtocol(Protocol):
             }
 
     def fetch_ds_values(self, condition: dict) -> Iterable[dict]:
-        for row in db.ds_values.find(condition).sort("blockNumber"):
+        cursor = db.ds_values.find(condition, no_cursor_timeout=True).sort(
+            "blockNumber"
+        )
+        for row in cursor:
             yield {
                 "event": "InvertedPricePosted",
                 "address": row["address"],
@@ -79,9 +82,13 @@ class CompoundProtocol(Protocol):
                 "transactionIndex": -1,
                 "logIndex": -1,
             }
+        cursor.close()
 
     def fetch_chi_values(self, condition: dict) -> Iterable[dict]:
-        for row in db.chi_values.find(condition).sort("blockNumber"):
+        cursor = db.chi_values.find(condition, no_cursor_timeout=True).sort(
+            "blockNumber"
+        )
+        for row in cursor:
             yield {
                 "event": "ChiUpdated",
                 "address": DSR_ADDRESS,
@@ -92,6 +99,7 @@ class CompoundProtocol(Protocol):
                 "transactionIndex": -5,
                 "logIndex": -5,
             }
+        cursor.close()
 
     def make_block_range_condition(
         self, min_block: int = None, max_block: int = None
