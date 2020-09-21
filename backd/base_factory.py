@@ -12,12 +12,12 @@ class classproperty(object):
 class BaseFactory:
     @classproperty
     @lru_cache()
-    def _entities(cls):
+    def _entities(cls):  # pylint: disable=no-self-argument
         return {}
 
     @classmethod
     def registered(cls):
-        return list(cls._entities.keys())
+        return list(cls._entities.keys())  # pylint: disable=no-member
 
     @classmethod
     def register(cls, name: str):
@@ -31,12 +31,14 @@ class BaseFactory:
 
         :param name: name with which the entity should be accessed
         """
+
         def wrapper(klass):
             if name in cls._entities:
                 raise ValueError(f"{name} already registered")
             cls._entities[name] = klass
             klass.__registered_name__ = name
             return klass
+
         return wrapper
 
     @classmethod
@@ -50,3 +52,7 @@ class BaseFactory:
         if name not in cls._entities:
             raise ValueError("{0} not registered".format(name))
         return cls._entities[name]
+
+    @classproperty
+    def registered_name(cls):  # pylint: disable=no-self-argument
+        return cls.__registered_name__  # pylint: disable=no-member

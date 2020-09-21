@@ -72,6 +72,8 @@ class Market:
 
     @property
     def underlying_exchange_rate(self):
+        if self.balances.token_balance == 0:
+            return 0
         numerator = self.get_cash() + self.balances.total_borrowed - self.reserves
         return numerator * int(1e18) // self.balances.token_balance
 

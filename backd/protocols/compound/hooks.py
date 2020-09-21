@@ -1,9 +1,9 @@
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Dict, Set
+from typing import Dict, Set, Tuple
 
-from ...entities import State
 from ...hook import Hook
+from .entities import CompoundState
 
 
 @Hook.register("non-zero-users")
@@ -22,22 +22,47 @@ class NonZeroUsers(Hook):
                 self.historical_count = OrderedDict()
 
     def __init__(self):
-        self.state = NonZeroUsers.HookState()
+        self.hook_state = self.__class__.HookState()
 
-    def global_start(self, state: State):
+    def global_start(self, state: CompoundState):
         if self.extra_key not in state.extra:
-            state.extra[self.extra_key] = self.state
+            state.extra[self.extra_key] = self.hook_state
 
-    def event_end(self, state: State, event: dict):
+    def event_end(self, state: CompoundState, event: dict):
         if event["event"] not in ["RepayBorrow", "Borrow"]:
             return
         user = event["returnValues"]["borrower"]
         for market in state.markets:
             total_borrowed = market.users[user].balances.total_borrowed
             if total_borrowed > 0:
-                self.state.current_users.add(user)
+                self.hook_state.current_users.add(user)
             else:
-                self.state.current_users.discard(user)
+                self.hook_state.current_users.discard(user)
 
-    def block_end(self, state: State, block_number: int):
-        self.state.historical_count[block_number] = len(self.state.current_users)
+    def block_end(self, state: CompoundState, block_number: int):
+        self.hook_state.historical_count[block_number] = len(
+            self.hook_state.current_users
+        )
+
+
+@Hook.register("users-borrow-supply")
+class UsersBorrowSupply(Hook):
+    extra_key = "users-borrow-supply"
+
+    def __init__(self):
+        # block -> users -> (supply, borrow)
+        self.hook_state: Dict[int, Dict[str, Tuple[int, int]]] = OrderedDict()
+
+    def global_start(self, state: CompoundState):
+        if self.extra_key not in state.extra:
+            state.extra[self.extra_key] = self.hook_state
+
+    @classmethod
+    def list_dependencies(cls):
+        return ["non-zero-users"]
+
+    def block_end(self, state: CompoundState, block_number: int):
+        self.hook_state[block_number] = {}
+        current_users = state.extra[NonZeroUsers.extra_key].current_users
+        for user in current_users:
+            self.hook_state[block_number][user] = state.compute_user_position(user)

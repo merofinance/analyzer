@@ -5,6 +5,10 @@ from .entities import State
 
 
 class Hook(BaseFactory):
+    @classmethod
+    def list_dependencies(cls):
+        return []
+
     def global_start(self, state: State):
         pass
 
@@ -36,13 +40,28 @@ class Hooks:
     def __init__(self, hooks: List[Union[Hook, str]] = None):
         if hooks is None:
             hooks = []
-        self.hooks = []
+        self.hooks_info = []
         for hook in hooks:
-            if isinstance(hook, str):
-                hook = Hook.get(hook)()
-            self.hooks.append(hook)
+            self.add_hook(hook)
         self._last_block = None
         self._last_transaction = None
+
+    def add_hook(self, hook: Union[Hook, str]):
+        if isinstance(hook, str):
+            hook = Hook.get(hook)()
+        if hook.registered_name in self.hook_names:
+            return
+        for dependent_hook in hook.list_dependencies():
+            self.add_hook(dependent_hook)
+        self.hooks_info.append((hook.registered_name, hook))
+
+    @property
+    def hook_names(self):
+        return [v[0] for v in self.hooks_info]
+
+    @property
+    def hooks(self):
+        return [v[1] for v in self.hooks_info]
 
     def execute_hooks_start(self, state: State, event: dict):
         if self._last_transaction != state.current_event_time.transaction_index:
