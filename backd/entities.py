@@ -1,3 +1,4 @@
+import pickle
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
@@ -181,3 +182,8 @@ class State:
             self.oracles = Oracles(self.markets)
         if self.extra is None:
             self.extra = {}
+
+    @classmethod
+    def load(cls, filepath: str) -> "State":
+        with open(filepath, "rb") as f:
+            return pickle.load(f)

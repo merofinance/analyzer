@@ -1,7 +1,9 @@
+import datetime as dt
+
 import pymongo
 
-from . import settings
-
+from . import constants, settings
+from .caching import cache
 
 SORT_KEY = [
     ("blockNumber", pymongo.ASCENDING),
@@ -30,6 +32,8 @@ def create_indices():
 
     db.chi_values.create_index("blockNumber", unique=True)
 
+    db.blocks.create_index("number", unique=True)
+
 
 def iterate_events():
     return db.events.find().sort(SORT_KEY)
@@ -37,3 +41,12 @@ def iterate_events():
 
 def count_events():
     return db.events.count_documents({})
+
+
+@cache(constants.DAY)
+def get_block_dates():
+    projection = {"_id": False, "number": True, "timestamp": True}
+    return {
+        b["number"]: dt.datetime.fromtimestamp(int(b["timestamp"]))
+        for b in db.blocks.find(projection=projection)
+    }

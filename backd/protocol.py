@@ -1,10 +1,10 @@
-from typing import Iterable
 from abc import ABC, abstractmethod
+from typing import Iterable
 
-from .event_processor import Processor
 from .base_factory import BaseFactory
-from .hook import Hooks
 from .entities import State
+from .event_processor import Processor
+from .hook import Hooks
 
 
 class Protocol(ABC, BaseFactory):
@@ -21,5 +21,11 @@ class Protocol(ABC, BaseFactory):
         pass
 
     @abstractmethod
-    def iterate_events(self, min_block: int = None, max_block: int = None) -> Iterable[dict]:
+    def iterate_events(
+        self, min_block: int = None, max_block: int = None
+    ) -> Iterable[dict]:
+        pass
+
+    @abstractmethod
+    def get_plots(self):
         pass

@@ -1,6 +1,6 @@
+import inspect
 import os
 from os import path
-import inspect
 
 
 def _is_test():
@@ -22,8 +22,10 @@ def _get_database_url():
         default_url = "mongodb://localhost:27017/backd-test"
     return os.environ.get("DATABASE_URL", default_url)
 
+
 BACKD_ENV = _get_backd_env()
 
 DATABASE_URL = _get_database_url()
 
 PROJECT_ROOT = path.dirname(path.dirname(__file__))
+CACHE_PATH = path.join(PROJECT_ROOT, "tmp", "cache")

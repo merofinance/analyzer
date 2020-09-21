@@ -1,16 +1,17 @@
-from typing import Iterable
 from functools import lru_cache
+from typing import Iterable
 
+from ... import utils
+from ...db import SORT_KEY, db
+from ...entities import PointInTime
 from ...event_processor import Processor
 from ...hook import Hooks
-from ...entities import PointInTime
-from ...db import db, SORT_KEY
 from ...protocol import Protocol
-from ... import utils
+from . import oracles  # pylint: disable=unused-import
+from . import plots
+from .constants import DS_VALUES_MAPPING, DSR_ADDRESS
 from .entities import CompoundState
 from .processor import CompoundProcessor
-from . import oracles  # pylint: disable=unused-import
-from .constants import DS_VALUES_MAPPING, DSR_ADDRESS
 
 
 @Protocol.register("compound")
@@ -113,3 +114,6 @@ class CompoundProtocol(Protocol):
             ]
         )
         return next(cursor)["block"]
+
+    def get_plots(self):
+        return plots
