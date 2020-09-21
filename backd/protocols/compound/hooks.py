@@ -49,6 +49,10 @@ class NonZeroUsers(Hook):
 class UsersBorrowSupply(Hook):
     extra_key = "users-borrow-supply"
 
+    @classmethod
+    def list_dependencies(cls):
+        return ["non-zero-users"]
+
     def __init__(self):
         # block -> users -> (supply, borrow)
         self.hook_state: Dict[int, Dict[str, Tuple[int, int]]] = OrderedDict()
@@ -56,10 +60,6 @@ class UsersBorrowSupply(Hook):
     def global_start(self, state: CompoundState):
         if self.extra_key not in state.extra:
             state.extra[self.extra_key] = self.hook_state
-
-    @classmethod
-    def list_dependencies(cls):
-        return ["non-zero-users"]
 
     def block_end(self, state: CompoundState, block_number: int):
         self.hook_state[block_number] = {}
