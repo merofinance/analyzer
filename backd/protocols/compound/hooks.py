@@ -36,8 +36,9 @@ class NonZeroUsers(Hook):
             total_borrowed = market.users[user].balances.total_borrowed
             if total_borrowed > 0:
                 self.hook_state.current_users.add(user)
-            else:
-                self.hook_state.current_users.discard(user)
+                break
+        else:
+            self.hook_state.current_users.discard(user)
 
     def block_end(self, state: CompoundState, block_number: int):
         self.hook_state.historical_count[block_number] = len(
@@ -62,6 +63,8 @@ class UsersBorrowSupply(Hook):
             state.extra[self.extra_key] = self.hook_state
 
     def block_end(self, state: CompoundState, block_number: int):
+        if block_number % 100 != 0:
+            return
         self.hook_state[block_number] = {}
         current_users = state.extra[NonZeroUsers.extra_key].current_users
         for user in current_users:
