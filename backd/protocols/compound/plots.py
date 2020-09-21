@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 
-from ... import db
+from ... import constants, db
+from ...plot_utils import DEFAULT_PALETTE
 from .entities import CompoundState
 from .hooks import NonZeroUsers, UsersBorrowSupply
 
@@ -33,25 +34,31 @@ def plot_supply_borrow_over_time(args: dict):
     blocks = [block for block in users_borrow_supply if block in block_dates]
     x = [block_dates[block] for block in blocks]
 
-    users = users_borrow_supply[blocks[-1]]
-
     if args["options"] and "thresholds" in args["options"]:
         thresholds = [float(v) for v in args["options"]["thresholds"].split(",")]
     else:
         thresholds = [1.0, 1.05, 1.1, 1.25, 1.5, 2.0]
     labels = ["< {0:.2f}%".format(t * 100) for t in thresholds]
+    labels.append(">= {0:.2f}%".format(thresholds[-1] * 100))
 
     block_buckets = []
+    total_borrows = []
     for block in blocks:
         users = users_borrow_supply[block]
-        buckets = [0] * len(thresholds)
+        buckets = [0] * (len(thresholds) + 1)
+        total = 0
         for supply, borrow in users.values():
+            normalized_borrow = borrow / constants.DEFAULT_DECIMALS
+            total += normalized_borrow
             ratio = supply / borrow
             for i, value in enumerate(thresholds):
                 # only add to first valid bucket
                 if ratio < value:
-                    buckets[i] += borrow / 10 ** 18
+                    buckets[i] += normalized_borrow
                     break
+            else:
+                buckets[-1] += normalized_borrow
+        total_borrows.append(total)
         block_buckets.append(buckets)
 
     ys = list(zip(*block_buckets))
@@ -59,7 +66,8 @@ def plot_supply_borrow_over_time(args: dict):
     plt.xticks(rotation=45)
     plt.xlabel("Date")
     plt.ylabel("Collateral in USD")
-    plt.stackplot(x, *ys, labels=labels)
+    plt.plot_date(x, total_borrows, fmt="-")
+    plt.stackplot(x, *ys, labels=labels, colors=DEFAULT_PALETTE)
     plt.legend(title="Supply/borrow ratio", loc="upper left")
     plt.tight_layout()
     output_plot(args.get("output"))
