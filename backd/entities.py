@@ -1,7 +1,7 @@
-from typing import List, Dict, Iterator
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Dict, Iterator, List
 
 from .base_factory import BaseFactory
 
@@ -17,7 +17,7 @@ class PointInTime:
         return cls(
             block_number=event["blockNumber"],
             transaction_index=event["transactionIndex"],
-            log_index=event["logIndex"]
+            log_index=event["logIndex"],
         )
 
 
@@ -172,9 +172,12 @@ class State:
     last_event_time: PointInTime = None
     markets: Markets = None
     oracles: Oracles = None
+    extra: dict = None  # used by hooks to persist data to state
 
     def __post_init__(self):
         if self.markets is None:
             self.markets = Markets()
         if self.oracles is None:
             self.oracles = Oracles(self.markets)
+        if self.extra is None:
+            self.extra = {}

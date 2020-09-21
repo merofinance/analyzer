@@ -1,6 +1,5 @@
 from setuptools import setup
 
-
 setup(
     name="backd",
     packages=["backd"],
@@ -9,6 +8,7 @@ setup(
         "stringcase",
         "smart-open",
         "tqdm",
+        "matplotlib",
     ],
     extras_require={
         "dev": [

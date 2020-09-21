@@ -1,12 +1,11 @@
-from typing import Dict
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Dict
 
-from ...entities import State, Market
+from ...entities import Market, State
 from ...tokens.dai.dsr import DSR
 from . import constants
 from .interest_rate_models import InterestRateModel
-
 
 EXP_SCALE = int(1e18)
 

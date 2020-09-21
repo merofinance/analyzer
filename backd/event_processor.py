@@ -1,18 +1,20 @@
-from typing import Iterable
 from abc import ABC, abstractmethod
+from typing import Iterable
 
 from tqdm import tqdm
 
+from . import normalizer
 from .entities import PointInTime, State
-from .base_factory import BaseFactory
 from .hook import Hooks
 
 
-class Processor(ABC, BaseFactory):
+class Processor(ABC):
     def __init__(self, hooks: Hooks = None):
         self.hooks = hooks
 
     def process_events(self, state: State, events: Iterable[dict], pbar: tqdm = None):
+        if self.hooks:
+            self.hooks.initialize_hooks(state)
         for event in events:
             self.process_event(state, event)
             if pbar:
@@ -23,6 +25,7 @@ class Processor(ABC, BaseFactory):
     def process_event(self, state: State, event: dict):
         if "event" not in event:
             return
+        event = normalizer.normalize_event(event)
         state.last_event_time = state.current_event_time
         state.current_event_time = PointInTime.from_event(event)
         if self.hooks:

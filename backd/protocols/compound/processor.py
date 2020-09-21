@@ -7,14 +7,13 @@ from decimal import Decimal
 
 import stringcase
 
-from ... import normalizer
-from ...event_processor import Processor
 from ...entities import Market
-from .entities import CompoundState as State, CDaiMarket
-from ...logger import logger
+from ...event_processor import Processor
 from ...hook import Hooks
+from ...logger import logger
 from . import constants
-
+from .entities import CDaiMarket
+from .entities import CompoundState as State
 
 FACTORS_DIVISOR = Decimal(10) ** constants.FACTORS_DECIMALS
 
@@ -26,7 +25,6 @@ def get_any_key(obj, keys):
     raise ValueError("none of {0} in {1}".format(", ".join(keys), obj))
 
 
-@Processor.register("compound")
 class CompoundProcessor(Processor):
     def __init__(self, hooks: Hooks = None, markets: dict = None):
         if hooks is None:
@@ -39,7 +37,6 @@ class CompoundProcessor(Processor):
         super().__init__(hooks=hooks)
 
     def _process_event(self, state, event):
-        event = normalizer.normalize_event(event)
         event_name = stringcase.snakecase(event["event"])
         func = getattr(self, f"process_{event_name}", None)
         if not func:
