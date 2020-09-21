@@ -114,3 +114,10 @@ class CompoundState(State):
             )
 
         return (sum_collateral, sum_borrows)
+
+    def compute_total_borrows(self) -> int:
+        sum_borrows = 0
+        for market in self.markets:
+            oracle_price = self.oracles.current.get_underlying_price(market.address)
+            sum_borrows += oracle_price * market.balances.total_borrowed / EXP_SCALE
+        return sum_borrows
