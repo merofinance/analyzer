@@ -4,19 +4,18 @@ from decimal import Decimal
 
 import pytest
 
-from backd.protocols.compound.processor import CompoundProcessor
 from backd.entities import PointInTime
+from backd.protocols.compound import constants
 from backd.protocols.compound.entities import CompoundState as State
 from backd.protocols.compound.interest_rate_models import JumpRateModel
-from backd.protocols.compound import constants
-
+from backd.protocols.compound.processor import CompoundProcessor
 from tests.fixtures import (
+    BORROW_MARKET,
+    MAIN_MARKET,
+    MAIN_ORACLE,
+    MAIN_USER,
     get_event,
     get_events_until,
-    MAIN_MARKET,
-    MAIN_USER,
-    MAIN_ORACLE,
-    BORROW_MARKET,
 )
 
 

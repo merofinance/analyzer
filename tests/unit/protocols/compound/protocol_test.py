@@ -1,8 +1,8 @@
 import pytest
 
-from backd.protocols.compound.protocol import CompoundProtocol
-from backd.protocols.compound.processor import CompoundProcessor
 from backd.protocols.compound.entities import CompoundState
+from backd.protocols.compound.processor import CompoundProcessor
+from backd.protocols.compound.protocol import CompoundProtocol
 
 
 @pytest.fixture

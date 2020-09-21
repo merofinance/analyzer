@@ -1,18 +1,15 @@
 from unittest.mock import patch
 
+from backd.entities import Market, Markets
 from backd.protocols.compound import oracles
-from backd.entities import Markets, Market
 from backd.protocols.compound.constants import MARKETS
 
 
 def test_is_token():
-    assert oracles.is_token(
-        "0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5", "ETH")
-    assert oracles.is_token(
-        "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5", "ETH")
+    assert oracles.is_token("0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5", "ETH")
+    assert oracles.is_token("0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5", "ETH")
 
-    assert not oracles.is_token(
-        "0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5", "USDC")
+    assert not oracles.is_token("0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5", "USDC")
 
     assert not oracles.is_token("0x01234", "ETH")
 
@@ -68,8 +65,7 @@ def test_price_oracle_v13():
     oracle.update_price(oracle.maker_usd_oracle_key, 6505757595471992)
     oracle.update_price(oracles.USDC_ORACLE_KEY, 6543771170404755000000000000)
     oracle.update_price(oracles.DAI_ORACLE_KEY, 6509366069108860)
-    assert oracle.get_underlying_price(
-        ctoken_address("SAI")) == 6471552357658807
+    assert oracle.get_underlying_price(ctoken_address("SAI")) == 6471552357658807
 
 
 def test_price_oracle_v14():
@@ -95,7 +91,9 @@ def test_price_oracle_v16():
     oracle = oracles.PriceOracleV16(Markets())
     oracle.update_price(oracles.USDC_ORACLE_KEY, 101)
     assert oracle.get_underlying_price(ctoken_address("USDT")) == 101
-    with patch.object(oracles.PriceOracleV15, "get_underlying_price", return_value=10) as mock_method:
+    with patch.object(
+        oracles.PriceOracleV15, "get_underlying_price", return_value=10
+    ) as mock_method:
         assert oracle.get_underlying_price(ctoken_address("DAI")) == 10
         mock_method.assert_called_once_with(ctoken_address("DAI"))
 

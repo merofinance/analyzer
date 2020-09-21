@@ -1,17 +1,19 @@
 import pytest
 
-from backd.protocols.compound.interest_rate_models import USDTRateModel, JumpRateModel
-from backd.protocols.compound.interest_rate_models import JumpRateModelV2
-from backd.protocols.compound.interest_rate_models import DAIInterestRateModel
-from backd.protocols.compound.interest_rate_models import DAIInterestRateModelV2
-from backd.protocols.compound.interest_rate_models import DAIInterestRateModelV3
-from backd.protocols.compound.interest_rate_models import Base0bpsSlope2000bpsRateModel
-from backd.protocols.compound.interest_rate_models import Base200bpsSlope1000bpsRateModel
-from backd.protocols.compound.interest_rate_models import Base200bpsSlope3000bpsRateModel
-from backd.protocols.compound.interest_rate_models import Base500bpsSlope1200bpsRateModel
-from backd.protocols.compound.interest_rate_models import Base500bpsSlope1500bpsRateModel
+from backd.protocols.compound.interest_rate_models import (
+    Base0bpsSlope2000bpsRateModel,
+    Base200bpsSlope1000bpsRateModel,
+    Base200bpsSlope3000bpsRateModel,
+    Base500bpsSlope1200bpsRateModel,
+    Base500bpsSlope1500bpsRateModel,
+    DAIInterestRateModel,
+    DAIInterestRateModelV2,
+    DAIInterestRateModelV3,
+    JumpRateModel,
+    JumpRateModelV2,
+    USDTRateModel,
+)
 from backd.tokens.dai.dsr import DSR
-
 
 BLOCK_NUMBER = 102
 

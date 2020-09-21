@@ -2,8 +2,16 @@ from decimal import Decimal
 
 import pytest
 
-from backd.entities import PointInTime, Market, Markets, Oracles, Oracle, MarketUser
-from backd.entities import Balances, UserBalances
+from backd.entities import (
+    Balances,
+    Market,
+    Markets,
+    MarketUser,
+    Oracle,
+    Oracles,
+    PointInTime,
+    UserBalances,
+)
 
 
 def test_point_in_time_from_event(compound_redeem_event):
@@ -65,7 +73,7 @@ def test_oracles_get_oracle():
     assert len(oracles) == 1
 
     with pytest.raises(ValueError):
-        oracles.get_oracle("0x12341234") # address must exist
+        oracles.get_oracle("0x12341234")  # address must exist
 
 
 def test_oracle_get_price():

@@ -282,8 +282,9 @@ class UniswapAnchorView(Oracle):
             self.CZRX_CONFIG,
         ]
         self._config_by_ctoken = {c.ctoken: c for c in self.token_configs}
-        self._token_to_underlying = {m["underlying_symbol"]: m["underlying_address"]
-                                     for m in constants.MARKETS}
+        self._token_to_underlying = {
+            m["underlying_symbol"]: m["underlying_address"] for m in constants.MARKETS
+        }
 
     def get_underlying_price(self, ctoken: str) -> int:
         # Comptroller needs prices in the format: ${raw price} * 1e(36 - baseUnit)
