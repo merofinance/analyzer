@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Dict
+from typing import Dict, List, Tuple
 
-from ...entities import Market, State
+from ...entities import Market, MarketUser, State
 from ...tokens.dai.dsr import DSR
 from . import constants
 from .interest_rate_models import InterestRateModel
@@ -83,12 +83,22 @@ class CompoundState(State):
     def create(cls):
         return cls(dsr=DSR.create())
 
+    def get_user_positions(self, user: str) -> List[Tuple[Market, MarketUser]]:
+        positions = []
+        for market in self.markets:
+            market_user = market.users[user]
+            if (
+                market_user.balances.total_borrowed > 0
+                or market_user.balances.token_balance > 0
+            ):
+                positions.append((market, market_user))
+        return positions
+
     def compute_user_position(self, user: str) -> (int, int):
         sum_collateral = 0
         sum_borrows = 0
 
-        for market in self.markets:
-            market_user = market.users[user]
+        for market, market_user in self.get_user_positions(user):
             user_balances = market_user.balances
             exchange_rate = market.underlying_exchange_rate
             collateral_factor = market.collateral_factor
