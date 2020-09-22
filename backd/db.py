@@ -48,9 +48,9 @@ def count_events():
 
 @cache(constants.DAY)
 def get_block_dates():
-    projection = {"_id": False, "number": True, "timestamp": True}
+    projection = {"_id": False, "blockNumber": True, "timestamp": True}
     return {
-        b["number"]: dt.datetime.fromtimestamp(int(b["timestamp"]), dt.timezone.utc)
+        b["blockNumber"]: dt.datetime.fromtimestamp(int(b["timestamp"]), dt.timezone.utc)
         for b in db.blocks.find(projection=projection)
     }
 

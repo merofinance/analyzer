@@ -1,10 +1,16 @@
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+from cycler import cycler
 from matplotlib.ticker import FuncFormatter
 
 from ... import constants, db
 from ...plot_utils import DEFAULT_PALETTE
 from .entities import CompoundState
-from .hooks import NonZeroUsers, UsersBorrowSupply
+from .hooks import LiquidationAmounts, NonZeroUsers, UsersBorrowSupply
+
+LARGE_MONETARY_FORMATTER = FuncFormatter(lambda x, _: "{:,}M".format(x // 1e6))
+
+mpl.rcParams["axes.prop_cycle"] = cycler(color=DEFAULT_PALETTE)
 
 
 def plot_borrowers_over_time(args: dict):
@@ -76,8 +82,30 @@ def plot_supply_borrow_over_time(args: dict):
     # plt.plot_date(x, total_supplies, fmt="-")
     plt.stackplot(x, *ys, labels=labels, colors=DEFAULT_PALETTE)
     ax = plt.gca()
-    ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: "{:,}M".format(x // 1e6)))
+    ax.yaxis.set_major_formatter(LARGE_MONETARY_FORMATTER)
     plt.legend(title="Supply/borrow ratio", loc="upper left")
+    plt.tight_layout()
+    output_plot(args.get("output"))
+
+
+def plot_liquidations_over_time(args: dict):
+    state = CompoundState.load(args["state"])
+    liquidation_info = state.extra[LiquidationAmounts.extra_key]
+    group_key = liquidation_info.timestamp.dt.floor("d")
+
+    counts = liquidation_info.groupby(group_key).size()
+    amounts = liquidation_info.groupby(group_key).usd_seized.sum() / 1e18
+
+    ax = plt.gca()
+    l1 = ax.plot_date(counts.index, counts.values, fmt="--", color=DEFAULT_PALETTE[0])
+    plt.xticks(rotation=45)
+    ax.set_ylabel("Number of liquidations")
+    ax.set_xlabel("Date")
+    ax2 = ax.twinx()
+    l2 = ax2.plot_date(amounts.index, amounts.values, fmt="-", color=DEFAULT_PALETTE[1])
+    ax2.set_ylabel("Amount liquidated (USD)")
+    ax2.yaxis.set_major_formatter(LARGE_MONETARY_FORMATTER)
+    ax.legend(l1 + l2, ["Count", "Amount"], loc="upper left")
     plt.tight_layout()
     output_plot(args.get("output"))
 

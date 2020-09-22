@@ -1,12 +1,16 @@
-COLORS = {
-    "green": "olivedrab",
-    "blue": "cornflowerblue",
-    "brown": "darkgoldenrod",
-    "gray": "darkgray",
-    "violet": "violet",
-    "coral": "lightcoral",
-    "teal": "teal",
-}
+from collections import OrderedDict
+
+COLORS = OrderedDict(
+    [
+        ("blue", "cornflowerblue"),
+        ("green", "olivedrab"),
+        ("brown", "darkgoldenrod"),
+        ("gray", "darkgray"),
+        ("violet", "violet"),
+        ("coral", "lightcoral"),
+        ("teal", "teal"),
+    ]
+)
 
 DEFAULT_PALETTE = list(COLORS.values())
 

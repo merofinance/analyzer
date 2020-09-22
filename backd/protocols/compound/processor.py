@@ -285,6 +285,9 @@ class CompoundProcessor(Processor):
         market.borrow_index = int(args["borrowIndex"])
         market.reserves += int(int(args["interestAccumulated"]) * market.reserve_factor)
 
+    def process_timestamp_updated(self, state: State, _event_address: str, args: dict):
+        state.timestamp = args["timestamp"]
+
     def update_user_borrow(self, market: Market, user_address: str):
         user = market.users[user_address]
         new_total_borrowed = user.borrowed_at(market.borrow_index)

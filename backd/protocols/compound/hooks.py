@@ -2,6 +2,8 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Dict, List, Set, Tuple
 
+import pandas as pd
+
 from ...hook import Hook
 from .entities import CompoundState
 
@@ -140,3 +142,33 @@ class UsersBorrowSupply(Hook):
         current_users = state.extra[NonZeroUsers.extra_key].current_users
         for user in current_users:
             self.hook_state[block_number][user] = state.compute_user_position(user)
+
+
+@Hook.register("liquidation-stats")
+class LiquidationAmounts(Hook):
+    extra_key = "liquidation-stats"
+
+    def __init__(self):
+        self.liquidations = []
+
+    def global_end(self, state: CompoundState):
+        state.extra[self.extra_key] = pd.DataFrame(self.liquidations)
+
+    def event_start(self, state: CompoundState, event: dict):
+        if event["event"] != "LiquidateBorrow":
+            return
+        args = event["returnValues"]
+        cmarket = state.markets.find_by_address(args["cTokenCollateral"])
+        token_seized = int(args["seizeTokens"])
+        usd_seized = state.ctoken_to_usd(token_seized, cmarket)
+        self.liquidations.append(
+            {
+                "block_number": event["blockNumber"],
+                "timestamp": state.timestamp,
+                "market": cmarket.address,
+                "transaction_hash": event["transactionHash"],
+                "transaction_index": event["transactionIndex"],
+                "usd_seized": usd_seized,
+                "token_seized": token_seized,
+            }
+        )

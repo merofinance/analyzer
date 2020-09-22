@@ -9,6 +9,7 @@ setup(
         "smart-open",
         "tqdm",
         "matplotlib",
+        "pandas",
     ],
     extras_require={
         "dev": [

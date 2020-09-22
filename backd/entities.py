@@ -1,3 +1,4 @@
+import datetime as dt
 import pickle
 from collections import defaultdict
 from dataclasses import dataclass
@@ -173,6 +174,7 @@ class State:
     protocol_name: str
     current_event_time: PointInTime = None
     last_event_time: PointInTime = None
+    timestamp: dt.datetime = None
     markets: Markets = None
     oracles: Oracles = None
     extra: dict = None  # used by hooks to persist data to state

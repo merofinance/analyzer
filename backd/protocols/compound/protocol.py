@@ -1,3 +1,4 @@
+import datetime as dt
 from functools import lru_cache
 from typing import Iterable
 
@@ -8,7 +9,7 @@ from ...hook import Hooks
 from ...protocol import Protocol
 from . import oracles  # pylint: disable=unused-import
 from . import plots
-from .constants import DS_VALUES_MAPPING, DSR_ADDRESS
+from .constants import DS_VALUES_MAPPING, DSR_ADDRESS, NULL_ADDRESS
 from .entities import CompoundState
 from .processor import CompoundProcessor
 
@@ -23,7 +24,13 @@ class CompoundProtocol(Protocol):
 
     def count_events(self, min_block: int = None, max_block: int = None) -> int:
         condition = self.make_block_range_condition(min_block, max_block)
-        collections = [db.db.events, db.db.ds_values, db.db.chi_values, db.db.prices]
+        collections = [
+            db.db.events,
+            db.db.ds_values,
+            db.db.chi_values,
+            db.db.prices,
+            db.db.blocks,
+        ]
         sai_events_count = len(list(self.sai_price_events(min_block, max_block)))
         db_events_count = sum(col.count_documents(condition) for col in collections)
         return sai_events_count + db_events_count
@@ -37,6 +44,7 @@ class CompoundProtocol(Protocol):
             self.fetch_ds_values(condition),
             self.fetch_chi_values(condition),
             self.fetch_external_prices(condition),
+            self.fetch_block_timestamps(condition),
             self.sai_price_events(min_block=min_block, max_block=max_block),
             key=PointInTime.from_event,
         )
@@ -114,6 +122,25 @@ class CompoundProtocol(Protocol):
                 "blockNumber": row["blockNumber"],
                 "transactionIndex": -10,
                 "logIndex": -10,
+            }
+        cursor.close()
+
+    def fetch_block_timestamps(self, condition: dict) -> Iterable[dict]:
+        projection = {"blockNumber": 1, "timestamp": 1}
+        kwargs = {"projection": projection, "no_cursor_timeout": True}
+        cursor = db.db.blocks.find(condition, **kwargs).sort("blockNumber")
+        for row in cursor:
+            yield {
+                "event": "TimestampUpdated",
+                "address": NULL_ADDRESS,
+                "returnValues": {
+                    "timestamp": dt.datetime.fromtimestamp(
+                        int(row["timestamp"]), dt.timezone.utc
+                    ),
+                },
+                "blockNumber": row["blockNumber"],
+                "transactionIndex": -1000,
+                "logIndex": -1000,
             }
         cursor.close()
 

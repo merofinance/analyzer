@@ -102,15 +102,19 @@ class CompoundState(State):
             user_balances = market_user.balances
             exchange_rate = market.underlying_exchange_rate
             collateral_factor = market.collateral_factor
-            oracle_price = self.oracles.current.get_underlying_price(market.address)
+            underlying_to_usd = self.oracles.current.get_underlying_price(
+                market.address
+            )
 
-            tokens_to_ether_left = (
+            ctoken_to_underlying = (
                 Decimal(round(collateral_factor * exchange_rate)) / EXP_SCALE
             )
-            tokens_to_ether = round(tokens_to_ether_left * oracle_price)
-            sum_collateral += tokens_to_ether * user_balances.token_balance // EXP_SCALE
+            ctokens_to_usd = round(ctoken_to_underlying * underlying_to_usd)
+            sum_collateral += ctokens_to_usd * user_balances.token_balance // EXP_SCALE
             sum_borrows += (
-                oracle_price * market_user.borrowed_at(market.borrow_index) // EXP_SCALE
+                underlying_to_usd
+                * market_user.borrowed_at(market.borrow_index)
+                // EXP_SCALE
             )
 
         return (sum_collateral, sum_borrows)
@@ -129,18 +133,18 @@ class CompoundState(State):
             sum_underlying += oracle_price * market.get_cash() / EXP_SCALE
         return sum_underlying
 
-    def compute_total_supply(self) -> int:
-        sum_supply = 0
-
+    def compute_supply_per_market(self) -> int:
+        markets = {}
         for market in self.markets:
-            exchange_rate = market.underlying_exchange_rate
-            collateral_factor = market.collateral_factor
-            oracle_price = self.oracles.current.get_underlying_price(market.address)
+            token_balance = market.balances.token_balance
+            markets[market.address] = self.ctoken_to_usd(token_balance, market)
+        return markets
 
-            tokens_to_ether_left = (
-                Decimal(round(collateral_factor * exchange_rate)) / EXP_SCALE
-            )
-            tokens_to_ether = round(tokens_to_ether_left * oracle_price)
-            sum_supply += tokens_to_ether * market.balances.token_balance // EXP_SCALE
+    def compute_total_supply(self) -> int:
+        return sum(self.compute_supply_per_market().values())
 
-        return sum_supply
+    def ctoken_to_usd(self, amount: int, market: Market) -> float:
+        exchange_rate = market.underlying_exchange_rate
+        oracle_price = self.oracles.current.get_underlying_price(market.address)
+        tokens_to_usd = exchange_rate * oracle_price / EXP_SCALE
+        return tokens_to_usd * amount / EXP_SCALE
