@@ -311,7 +311,10 @@ def test_sai_price_set(processor: CompoundProcessor, state: State):
     }
     processor.process_event(state, event)
     csai = "0xf5dce57282a584d2746faf1593d3121fcac444dc"
-    assert state.oracles.get_oracle(oracle).get_underlying_price(csai) == 100
+    actual = state.oracles.get_oracle(oracle).get_underlying_price(
+        csai, usd_price=False
+    )
+    assert actual == 100
 
 
 def test_chi_updated(processor: CompoundProcessor, state: State):
