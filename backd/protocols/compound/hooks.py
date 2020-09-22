@@ -54,92 +54,67 @@ class LeverageSpirals(Hook):
     class Spiral:
         transaction_hash: str
         start_position: Tuple[int, int]
-        end_position: Tuple[int, int]
-        events: List[dict]
+        start_market_positions: Dict[str, Dict[str, int]]
+        events: List[dict] = field(default_factory=list)
 
-        def __post_init__(self):
-            self.events = []
-
-    @dataclass
-    class HookState:
-        # all_spirals: Dict[int, Dict[str, Dict]] = None
-        all_spirals: Dict[int, Dict[str, Spiral]]
-        seen_tx_users: Set[str] = None
-
-        def __post_init__(self):
-            if self.all_spirals is None:
-                self.all_spirals = {}
+        end_position: Tuple[int, int] = None
+        end_market_positions: Dict[str, Dict[str, int]] = None
 
     def __init__(self):
-        self.hook_state = self.__class__.HookState()
+        # block -> user -> spiral
+        self.all_spirals: Dict[int, Dict[str, LeverageSpirals.Spiral]] = OrderedDict()
+        self.current_tx_spirals: Dict[str, LeverageSpirals.Spiral] = {}
+
+    def global_start(self, state: CompoundState):
+        if self.extra_key not in state.extra:
+            state.extra[self.extra_key] = self.all_spirals
+
+    def block_start(self, state: CompoundState, block_number: int):
+        self.all_spirals[block_number] = {}
 
     def transaction_start(
         self, state: CompoundState, block_number: int, transaction_index: int
     ):
-        self.hook_state.seen_tx_users = set()
+        self.current_tx_spirals = {}
 
     def transaction_end(
         self, state: CompoundState, block_number: int, transaction_index: int
     ):
-        # compute the latest balances for all seen users in spirals
-        for user in self.hook_state.seen_tx_users:
-            total_collateral, total_borrows = state.compute_user_position(user)
-            self.hook_state.all_spirals[block_number][user]["end_position"] = (
-                total_borrows,
-                total_collateral,
-            )
-
-            # check if this TX is a spiral and remove if not
-            if not self._is_spiral(self.hook_state.all_spirals[block_number][user]):
-                del self.hook_state.all_spirals[block_number][user]
+        for user, spiral in self.current_tx_spirals.items():
+            if self._is_spiral(spiral):
+                spiral.end_position = state.compute_user_position(user)
+                spiral.end_market_positions = state.get_user_positions(user)
+                self.all_spirals[block_number][user] = spiral
 
     def _is_spiral(self, spiral: dict):
-        borrow_events = (1 for k in spiral["events"] if k["event"] == "Borrow")
+        borrow_events = (1 for k in spiral.events if k["event"] == "Borrow")
         if sum(borrow_events) <= 1:
             return False
 
-        mint_events = (1 for k in spiral["events"] if k["event"] == "Mint")
+        mint_events = (1 for k in spiral.events if k["event"] == "Mint")
         if sum(mint_events) <= 1:
             return False
         return True
 
-    def _seen_user(self, user: str, event: dict, state: CompoundState):
-        self.hook_state.seen_tx_users.add(user)
-        total_collateral, total_borrows = state.compute_user_position(user)
-        print("here")
-        blockNumber = event["blockNumber"]
-        self.hook_state.all_spirals[blockNumber] = {
-            user: {"transaction_hash": event["transactionHash"]}
-        }
-        print("there")
-        self.hook_state.all_spirals[blockNumber][user]["start_position"][
-            0
-        ] = total_borrows
-        self.hook_state.all_spirals[blockNumber][user]["start_position"][
-            1
-        ] = total_collateral
+    def _initialize_user(self, user: str, event: dict, state: CompoundState):
+        spiral = self.__class__.Spiral(
+            transaction_hash=event["transactionHash"],
+            start_position=state.compute_user_position(user),
+            start_market_positions=state.get_user_positions(user),
+        )
+        self.current_tx_spirals[user] = spiral
 
     def event_start(self, state: CompoundState, event: dict):
-        blockNumber = event["blockNumber"]
-        if event["event"] == "Borrow":
-            user = event["returnValues"]["borrower"]
-            if user not in self.hook_state.seen_tx_users:
-                self._seen_user(user, event, state)
-            self.hook_state.all_spirals[blockNumber][user]["events"].append(event)
-        elif event["event"] == "Mint":
-            user = event["returnValues"]["minter"]
-            if user not in self.hook_state.seen_tx_users:
-                self._seen_user(user, event, state)
-            self.hook_state.all_spirals[blockNumber][user]["events"].append(event)
+        if event["event"] not in ["Borrow", "Mint"]:
+            return
+        user = self._get_user(event)
+        if user not in self.current_tx_spirals:
+            self._initialize_user(user, event, state)
+        self.current_tx_spirals[user].events.append(event)
 
-    def event_end(self, state: CompoundState, event: dict):
-        pass
-
-    def global_start(self, state: CompoundState):
-        pass
-
-    def global_end(self, state: CompoundState):
-        pass
+    def _get_user(self, event: dict):
+        key = {"Borrow": "borrower", "Mint": "minter"}[event["event"]]
+        return event["returnValues"][key]
 
 
 @Hook.register("users-borrow-supply")
