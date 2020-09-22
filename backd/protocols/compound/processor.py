@@ -247,6 +247,12 @@ class CompoundProcessor(Processor):
         value = int(args["newPriceMantissa"])
         oracle.update_price(args["asset"], value)
 
+    def process_external_price_updated(
+        self, state: State, event_address: str, args: dict
+    ):
+        oracle = state.oracles.get_oracle(event_address)
+        oracle.update_price(args["symbol"], args["price"])
+
     def process_price_updated(self, state: State, event_address: str, args: dict):
         oracle = state.oracles.get_oracle(event_address)
         value = int(args["price"])

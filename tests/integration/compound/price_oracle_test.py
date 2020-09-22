@@ -1,15 +1,14 @@
-from os import path
 import json
+from os import path
 
 import pytest
 from tqdm import tqdm
 
-from tests.fixtures import FIXTURES_PATH
-
-from backd.protocols.compound.protocol import CompoundProtocol
-from backd import executor
-from backd import settings
+from backd import executor, settings
 from backd.entities import Oracle
+from backd.protocols.compound.oracles import UniswapAnchorView
+from backd.protocols.compound.protocol import CompoundProtocol
+from tests.fixtures import FIXTURES_PATH
 
 
 @pytest.fixture
@@ -42,7 +41,7 @@ def test_prices(sample_prices):
 
         for price in line["prices"]:
             oracle = Oracle.get(price["address"].lower())(markets=state.markets)
+            usd_price = isinstance(oracle, UniswapAnchorView)
             expected_price = price["price"]
-            assert (
-                oracle.get_underlying_price(price["asset"]) == expected_price
-            ), f"price oracle divereged at block {block}"
+            actual = oracle.get_underlying_price(price["asset"], usd_price=usd_price)
+            assert actual == expected_price, f"price oracle divereged at block {block}"

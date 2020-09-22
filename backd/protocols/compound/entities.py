@@ -41,7 +41,7 @@ class InterestRateModels:
         return model
 
 
-@dataclass
+@dataclass(eq=False, repr=False)
 class CDaiMarket(Market):
     dsr_active: bool = False
     pie: int = 0
@@ -121,3 +121,26 @@ class CompoundState(State):
             oracle_price = self.oracles.current.get_underlying_price(market.address)
             sum_borrows += oracle_price * market.balances.total_borrowed / EXP_SCALE
         return sum_borrows
+
+    def compute_total_underlying(self) -> int:
+        sum_underlying = 0
+        for market in self.markets:
+            oracle_price = self.oracles.current.get_underlying_price(market.address)
+            sum_underlying += oracle_price * market.get_cash() / EXP_SCALE
+        return sum_underlying
+
+    def compute_total_supply(self) -> int:
+        sum_supply = 0
+
+        for market in self.markets:
+            exchange_rate = market.underlying_exchange_rate
+            collateral_factor = market.collateral_factor
+            oracle_price = self.oracles.current.get_underlying_price(market.address)
+
+            tokens_to_ether_left = (
+                Decimal(round(collateral_factor * exchange_rate)) / EXP_SCALE
+            )
+            tokens_to_ether = round(tokens_to_ether_left * oracle_price)
+            sum_supply += tokens_to_ether * market.balances.token_balance // EXP_SCALE
+
+        return sum_supply

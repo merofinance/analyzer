@@ -10,6 +10,8 @@ fi
 data_path="$1"
 echo "Using data in $data_path"
 
+echo "Inserting prices"
+python scripts/store_prices.py "$data_path/ethusdt.csv"
 echo "Inserting all blocks"
 zcat "$data_path/blocks.csv.gz" | mongoimport --db=backd-data --collection=blocks --headerline --type=csv
 echo "Inserting all events"

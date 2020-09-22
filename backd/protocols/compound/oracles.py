@@ -29,17 +29,25 @@ def find_market(symbol: str) -> dict:
 
 _oracle_prices = {}
 
+ETHUSDT_KEY = "ethusdt"
+
 
 @Oracle.register("0x02557a5e05defeffd4cae6d83ea3d173b272c904")
 class PriceOracleV1(Oracle):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, prices=_oracle_prices, **kwargs)
 
-    def get_underlying_price(self, ctoken: str) -> int:
+    def _finalize_underlying_price(self, price: int, usd_price: bool):
+        if usd_price:
+            return int(price * self.get_price(ETHUSDT_KEY))
+        return price
+
+    def get_underlying_price(self, ctoken: str, usd_price: bool = True) -> int:
         if not self.is_listed(ctoken):
             return 0
         market = MARKETS_BY_CTOKEN.get(ctoken.lower(), {})
-        return self.get_price(market.get("underlying_address", ""))
+        price = self.get_price(market.get("underlying_address", ""))
+        return self._finalize_underlying_price(price, usd_price=usd_price)
 
     def is_listed(self, ctoken: str) -> bool:
         ctoken = ctoken.lower()
@@ -52,37 +60,40 @@ class PriceOracleV1(Oracle):
 
 @Oracle.register("0x28f829f473638ba82710c8404a778f9a66029aad")
 class PriceOracleV11(PriceOracleV1):
-    def get_underlying_price(self, ctoken: str) -> int:
+    def get_underlying_price(self, ctoken: str, usd_price: bool = True) -> int:
         if is_token(ctoken, "ETH"):
-            return ETH_BASE_UNIT
-        return super().get_underlying_price(ctoken)
+            return self._finalize_underlying_price(ETH_BASE_UNIT, usd_price=usd_price)
+        return super().get_underlying_price(ctoken, usd_price=usd_price)
 
 
 @Oracle.register("0xe7664229833ae4abf4e269b8f23a86b657e2338d")
 class PriceOracleV12(PriceOracleV1):
-    def get_underlying_price(self, ctoken: str) -> int:
+    def get_underlying_price(self, ctoken: str, usd_price: bool = True) -> int:
         if is_token(ctoken, "ETH"):
-            return ETH_BASE_UNIT
+            return self._finalize_underlying_price(ETH_BASE_UNIT, usd_price=usd_price)
         if is_token(ctoken, "USDC"):
-            return super().get_price(USDC_ORACLE_KEY)
-        return super().get_underlying_price(ctoken)
+            price = super().get_price(USDC_ORACLE_KEY)
+            return self._finalize_underlying_price(price, usd_price=usd_price)
+        return super().get_underlying_price(ctoken, usd_price=usd_price)
 
 
 @Oracle.register("0x2c9e6bdaa0ef0284eecef0e0cc102dcdeae4887e")
 class PriceOracleV13(PriceOracleV1):
     maker_usd_oracle_key = "0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359"
 
-    def get_underlying_price(self, ctoken: str) -> int:
+    def get_underlying_price(self, ctoken: str, usd_price: bool = True) -> int:
         if is_token(ctoken, "ETH"):
-            return ETH_BASE_UNIT
+            return self._finalize_underlying_price(ETH_BASE_UNIT, usd_price=usd_price)
 
         if is_token(ctoken, "USDC"):
-            return super().get_price(self.maker_usd_oracle_key) * 10 ** 12
+            price = super().get_price(self.maker_usd_oracle_key) * 10 ** 12
+            return self._finalize_underlying_price(price, usd_price=usd_price)
 
         if is_token(ctoken, "SAI"):
-            return self._compute_dai_price()
+            price = self._compute_dai_price()
+            return self._finalize_underlying_price(price, usd_price=usd_price)
 
-        return super().get_underlying_price(ctoken)
+        return super().get_underlying_price(ctoken, usd_price=usd_price)
 
     def _compute_dai_price(self) -> int:
         maker_usd_price = super().get_price(self.maker_usd_oracle_key)
@@ -101,9 +112,10 @@ class PriceOracleV13(PriceOracleV1):
 
 @Oracle.register("0x1d8aedc9e924730dd3f9641cdb4d1b92b848b4bd")
 class PriceOracleV14(PriceOracleV13):
-    def get_underlying_price(self, ctoken: str) -> int:
+    def get_underlying_price(self, ctoken: str, usd_price: bool = True) -> int:
         if is_token(ctoken, "DAI") or is_token(ctoken, "SAI"):
-            return self._compute_dai_price()
+            price = self._compute_dai_price()
+            return self._finalize_underlying_price(price, usd_price=usd_price)
         return super().get_underlying_price(ctoken)
 
 
@@ -112,22 +124,26 @@ _sai_prices = {}
 
 @Oracle.register("0xda17fbeda95222f331cb1d252401f4b44f49f7a0")
 class PriceOracleV15(PriceOracleV1):
-    def get_underlying_price(self, ctoken: str) -> int:
+    def get_underlying_price(self, ctoken: str, usd_price: bool = True) -> int:
         if is_token(ctoken, "ETH"):
-            return 10 ** 18
+            return self._finalize_underlying_price(ETH_BASE_UNIT, usd_price=usd_price)
 
         if is_token(ctoken, "USDC"):
-            return self.get_price(USDC_ORACLE_KEY)
+            price = self.get_price(USDC_ORACLE_KEY)
+            return self._finalize_underlying_price(price, usd_price=usd_price)
 
         if is_token(ctoken, "DAI"):
-            return self.get_price(DAI_ORACLE_KEY)
+            price = self.get_price(DAI_ORACLE_KEY)
+            return self._finalize_underlying_price(price, usd_price=usd_price)
 
         if is_token(ctoken, "SAI"):
             if self.sai_price > 0:
-                return self.sai_price
-            return self.get_price(DAI_ORACLE_KEY)
+                price = self.sai_price
+            else:
+                price = self.get_price(DAI_ORACLE_KEY)
+            return self._finalize_underlying_price(price, usd_price=usd_price)
 
-        return super().get_underlying_price(ctoken)
+        return super().get_underlying_price(ctoken, usd_price=usd_price)
 
     @property
     def sai_price(self):
@@ -140,10 +156,11 @@ class PriceOracleV15(PriceOracleV1):
 
 @Oracle.register("0xddc46a3b076aec7ab3fc37420a8edd2959764ec4")
 class PriceOracleV16(PriceOracleV15):
-    def get_underlying_price(self, ctoken: str) -> int:
+    def get_underlying_price(self, ctoken: str, usd_price: bool = True) -> int:
         if is_token(ctoken, "USDT"):
-            return self.get_price(USDC_ORACLE_KEY)
-        return super().get_underlying_price(ctoken)
+            price = self.get_price(USDC_ORACLE_KEY)
+            return self._finalize_underlying_price(price, usd_price=usd_price)
+        return super().get_underlying_price(ctoken, usd_price=usd_price)
 
 
 class PriceSource(Enum):
@@ -286,13 +303,16 @@ class UniswapAnchorView(Oracle):
             m["underlying_symbol"]: m["underlying_address"] for m in constants.MARKETS
         }
 
-    def get_underlying_price(self, ctoken: str) -> int:
+    def get_underlying_price(self, ctoken: str, usd_price: bool = True) -> int:
         # Comptroller needs prices in the format: ${raw price} * 1e(36 - baseUnit)
         # Since the prices in this view have 6 decimals, we must scale them by 1e(36 - 6 - baseUnit)
         config = self._config_by_ctoken.get(ctoken.lower())
         if not config:
             return 0
-        return 10 ** 30 * self._get_price(config) // config.base_unit
+        price = 10 ** 30 * self._get_price(config) // config.base_unit
+        if not usd_price:
+            price /= self.get_price(constants.ETH_ADDRESS)
+        return price
 
     def _get_price(self, config: TokenConfig) -> int:
         if config.price_source == PriceSource.REPORTER:

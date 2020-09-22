@@ -1,8 +1,7 @@
 from functools import lru_cache
 from typing import Iterable
 
-from ... import utils
-from ...db import SORT_KEY, db
+from ... import db, utils
 from ...entities import PointInTime
 from ...event_processor import Processor
 from ...hook import Hooks
@@ -24,7 +23,7 @@ class CompoundProtocol(Protocol):
 
     def count_events(self, min_block: int = None, max_block: int = None) -> int:
         condition = self.make_block_range_condition(min_block, max_block)
-        collections = [db.events, db.ds_values, db.chi_values]
+        collections = [db.db.events, db.db.ds_values, db.db.chi_values, db.db.prices]
         sai_events_count = len(list(self.sai_price_events(min_block, max_block)))
         db_events_count = sum(col.count_documents(condition) for col in collections)
         return sai_events_count + db_events_count
@@ -34,9 +33,10 @@ class CompoundProtocol(Protocol):
     ) -> Iterable[dict]:
         condition = self.make_block_range_condition(min_block, max_block)
         return utils.merge_sorted_streams(
-            db.events.find(condition).sort(SORT_KEY),
+            db.db.events.find(condition).sort(db.SORT_KEY),
             self.fetch_ds_values(condition),
             self.fetch_chi_values(condition),
+            self.fetch_external_prices(condition),
             self.sai_price_events(min_block=min_block, max_block=max_block),
             key=PointInTime.from_event,
         )
@@ -67,7 +67,7 @@ class CompoundProtocol(Protocol):
             }
 
     def fetch_ds_values(self, condition: dict) -> Iterable[dict]:
-        cursor = db.ds_values.find(condition, no_cursor_timeout=True).sort(
+        cursor = db.db.ds_values.find(condition, no_cursor_timeout=True).sort(
             "blockNumber"
         )
         for row in cursor:
@@ -85,7 +85,7 @@ class CompoundProtocol(Protocol):
         cursor.close()
 
     def fetch_chi_values(self, condition: dict) -> Iterable[dict]:
-        cursor = db.chi_values.find(condition, no_cursor_timeout=True).sort(
+        cursor = db.db.chi_values.find(condition, no_cursor_timeout=True).sort(
             "blockNumber"
         )
         for row in cursor:
@@ -98,6 +98,22 @@ class CompoundProtocol(Protocol):
                 "blockNumber": row["blockNumber"],
                 "transactionIndex": -5,
                 "logIndex": -5,
+            }
+        cursor.close()
+
+    def fetch_external_prices(self, condition: dict) -> Iterable[dict]:
+        cursor = db.prices().find(condition, no_cursor_timeout=True).sort("blockNumber")
+        for row in cursor:
+            yield {
+                "event": "ExternalPriceUpdated",
+                "address": oracles.PriceOracleV1.registered_name,
+                "returnValues": {
+                    "price": row["price"].to_decimal(),
+                    "symbol": row["symbol"],
+                },
+                "blockNumber": row["blockNumber"],
+                "transactionIndex": -10,
+                "logIndex": -10,
             }
         cursor.close()
 
@@ -114,7 +130,7 @@ class CompoundProtocol(Protocol):
 
     @lru_cache(maxsize=None)
     def get_max_block(self):
-        cursor = db.events.aggregate(
+        cursor = db.db.events.aggregate(
             [
                 {"$match": {"event": "AccrueInterest"}},
                 {"$group": {"_id": "$address", "max_block": {"$max": "$blockNumber"}}},

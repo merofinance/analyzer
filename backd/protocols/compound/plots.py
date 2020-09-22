@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 
 from ... import constants, db
 from ...plot_utils import DEFAULT_PALETTE
@@ -15,7 +16,10 @@ def plot_borrowers_over_time(args: dict):
         for block, count in users_count.items()
         if count > 0 and block in block_dates
     ]
-    interval = int(args["options"].get("interval", 1))
+    if args["options"] and "interval" in args["options"]:
+        interval = int(args["options"]["interval"])
+    else:
+        interval = 100
     x = [block_dates[v[0]] for v in non_zero_users[::interval]]
     y = [v[1] for v in non_zero_users[::interval]]
     plt.xticks(rotation=45)
@@ -39,26 +43,29 @@ def plot_supply_borrow_over_time(args: dict):
     else:
         thresholds = [1.0, 1.05, 1.1, 1.25, 1.5, 2.0]
     labels = ["< {0:.2f}%".format(t * 100) for t in thresholds]
-    labels.append(">= {0:.2f}%".format(thresholds[-1] * 100))
+    labels.append("$\\geq$ {0:.2f}%".format(thresholds[-1] * 100))
 
     block_buckets = []
-    total_borrows = []
+    total_supplies = []
     for block in blocks:
         users = users_borrow_supply[block]
         buckets = [0] * (len(thresholds) + 1)
         total = 0
         for supply, borrow in users.values():
-            normalized_borrow = borrow / constants.DEFAULT_DECIMALS
-            total += normalized_borrow
-            ratio = supply / borrow
+            normalized_supply = supply / constants.DEFAULT_DECIMALS
+            total += normalized_supply
+            if borrow == 0:
+                ratio = 1000
+            else:
+                ratio = supply / borrow
             for i, value in enumerate(thresholds):
                 # only add to first valid bucket
                 if ratio < value:
-                    buckets[i] += normalized_borrow
+                    buckets[i] += normalized_supply
                     break
             else:
-                buckets[-1] += normalized_borrow
-        total_borrows.append(total)
+                buckets[-1] += normalized_supply
+        total_supplies.append(total)
         block_buckets.append(buckets)
 
     ys = list(zip(*block_buckets))
@@ -66,8 +73,10 @@ def plot_supply_borrow_over_time(args: dict):
     plt.xticks(rotation=45)
     plt.xlabel("Date")
     plt.ylabel("Collateral in USD")
-    plt.plot_date(x, total_borrows, fmt="-")
+    # plt.plot_date(x, total_supplies, fmt="-")
     plt.stackplot(x, *ys, labels=labels, colors=DEFAULT_PALETTE)
+    ax = plt.gca()
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: "{:,}M".format(x // 1e6)))
     plt.legend(title="Supply/borrow ratio", loc="upper left")
     plt.tight_layout()
     output_plot(args.get("output"))

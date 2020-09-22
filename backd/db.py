@@ -1,6 +1,7 @@
 import datetime as dt
 
 import pymongo
+from bson.codec_options import CodecOptions
 
 from . import constants, settings
 from .caching import cache
@@ -34,6 +35,8 @@ def create_indices():
 
     db.blocks.create_index("number", unique=True)
 
+    db.prices.create_index("blockNumber", unique=True)
+
 
 def iterate_events():
     return db.events.find().sort(SORT_KEY)
@@ -47,6 +50,11 @@ def count_events():
 def get_block_dates():
     projection = {"_id": False, "number": True, "timestamp": True}
     return {
-        b["number"]: dt.datetime.fromtimestamp(int(b["timestamp"]))
+        b["number"]: dt.datetime.fromtimestamp(int(b["timestamp"]), dt.timezone.utc)
         for b in db.blocks.find(projection=projection)
     }
+
+
+def prices():
+    options = CodecOptions(tz_aware=True)
+    return db.get_collection("prices", codec_options=options)
