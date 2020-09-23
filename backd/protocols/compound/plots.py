@@ -64,7 +64,7 @@ def plot_supply_borrow_over_time(args: dict):
     key_mapping = {
         "borrows": "Total borrowed",
         "supply": "Total supply",
-        "underlying": "Total collateral",
+        "underlying": "Total locked",
     }
     for key, new_key in key_mapping.items():
         supply_borrows[new_key] = supply_borrows[key] / 1e18
@@ -78,6 +78,7 @@ def plot_supply_borrow_over_time(args: dict):
     ax.yaxis.set_major_formatter(LARGE_MONETARY_FORMATTER)
     ax.set_ylabel("Amount (USD)")
     ax.set_xlabel("Date")
+    plt.tight_layout()
     output_plot(args.get("output"))
 
 
