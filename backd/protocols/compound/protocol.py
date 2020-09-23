@@ -127,8 +127,9 @@ class CompoundProtocol(Protocol):
 
     def fetch_block_timestamps(self, condition: dict) -> Iterable[dict]:
         projection = {"blockNumber": 1, "timestamp": 1}
-        kwargs = {"projection": projection, "no_cursor_timeout": True}
-        cursor = db.db.blocks.find(condition, **kwargs).sort("blockNumber")
+        cursor = db.db.blocks.find(
+            condition, projection=projection, no_cursor_timeout=True
+        ).sort("blockNumber")
         for row in cursor:
             yield {
                 "event": "TimestampUpdated",
