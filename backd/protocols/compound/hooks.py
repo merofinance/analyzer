@@ -8,9 +8,9 @@ from ...hook import Hook
 from .entities import CompoundState
 
 
-@Hook.register("non-zero-users")
-class NonZeroUsers(Hook):
-    extra_key = "non_zero_users"
+@Hook.register("borrowers")
+class Borrowers(Hook):
+    extra_key = "borrowers"
 
     @dataclass
     class HookState:
@@ -41,6 +41,53 @@ class NonZeroUsers(Hook):
                 break
         else:
             self.hook_state.current_users.discard(user)
+
+    def block_end(self, state: CompoundState, block_number: int):
+        self.hook_state.historical_count[block_number] = len(
+            self.hook_state.current_users
+        )
+
+
+@Hook.register("suppliers")
+class Suppliers(Hook):
+    extra_key = "suppliers"
+
+    @dataclass
+    class HookState:
+        current_users: Set[str] = None
+        historical_count: Dict[int, int] = None
+
+        def __post_init__(self):
+            if self.current_users is None:
+                self.current_users = set()
+            if self.historical_count is None:
+                self.historical_count = OrderedDict()
+
+    def __init__(self):
+        self.hook_state = self.__class__.HookState()
+
+    def global_start(self, state: CompoundState):
+        if self.extra_key not in state.extra:
+            state.extra[self.extra_key] = self.hook_state
+
+    def event_end(self, state: CompoundState, event: dict):
+        args = event["returnValues"]
+        if event["event"] == "Mint":
+            users = [args["minter"]]
+        elif event["event"] == "Redeem":
+            users = [args["redeemer"]]
+        elif event["event"] == "LiquidateBorrow":
+            users = [args["borrower"], args["liquidator"]]
+        else:
+            return
+
+        for user in users:
+            for market in state.markets:
+                if market.users[user].balances.token_balance > 0:
+                    self.hook_state.current_users.add(user)
+                    break
+            else:
+                self.hook_state.current_users.discard(user)
 
     def block_end(self, state: CompoundState, block_number: int):
         self.hook_state.historical_count[block_number] = len(
@@ -125,7 +172,7 @@ class UsersBorrowSupply(Hook):
 
     @classmethod
     def list_dependencies(cls):
-        return ["non-zero-users"]
+        return [Borrowers.registered_name]
 
     def __init__(self):
         # block -> users -> (supply, borrow)
@@ -139,7 +186,7 @@ class UsersBorrowSupply(Hook):
         if block_number % 100 != 0:
             return
         self.hook_state[block_number] = {}
-        current_users = state.extra[NonZeroUsers.extra_key].current_users
+        current_users = state.extra[Borrowers.extra_key].current_users
         for user in current_users:
             self.hook_state[block_number][user] = state.compute_user_position(user)
 
@@ -181,7 +228,7 @@ class LiquidationAmountsWithTime(LiquidationAmounts):
 
     @classmethod
     def list_dependencies(cls):
-        return ["non-zero-users"]
+        return [Borrowers.registered_name]
 
     def __init__(self):
         super().__init__()
@@ -198,7 +245,7 @@ class LiquidationAmountsWithTime(LiquidationAmounts):
         return liquidation
 
     def block_end(self, state: CompoundState, block_number: int):
-        current_users = state.extra[NonZeroUsers.extra_key].current_users
+        current_users = state.extra[Borrowers.extra_key].current_users
         liquidatable = set()
         for user in current_users:
             supply, borrow = state.compute_user_position(user)

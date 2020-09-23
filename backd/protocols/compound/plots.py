@@ -6,8 +6,9 @@ from matplotlib.ticker import FuncFormatter
 from ... import constants, db
 from ...plot_utils import DEFAULT_PALETTE
 from .entities import CompoundState
-from .hooks import LiquidationAmounts, NonZeroUsers, UsersBorrowSupply
+from .hooks import Borrowers, LiquidationAmounts, Suppliers, UsersBorrowSupply
 
+INT_FORMATTER = FuncFormatter(lambda x, _: "{:,}".format(int(x)))
 LARGE_MONETARY_FORMATTER = FuncFormatter(lambda x, _: "{:,}M".format(x // 1e6))
 
 mpl.rcParams["axes.prop_cycle"] = cycler(color=DEFAULT_PALETTE)
@@ -16,23 +17,39 @@ mpl.rcParams["axes.prop_cycle"] = cycler(color=DEFAULT_PALETTE)
 def plot_borrowers_over_time(args: dict):
     state = CompoundState.load(args["state"])
     block_dates = db.get_block_dates()
-    users_count = state.extra[NonZeroUsers.extra_key].historical_count
-    non_zero_users = [
-        (block, count)
-        for block, count in users_count.items()
-        if count > 0 and block in block_dates
-    ]
+
+    def get_users(history):
+        return [
+            (block, count)
+            for block, count in history.items()
+            if count > 0 and block in block_dates
+        ]
+
+    def get_xy(users, interval):
+        x = [block_dates[v[0]] for v in users[::interval]]
+        y = [v[1] for v in users[::interval]]
+        return x, y
+
+    suppliers = get_users(state.extra[Suppliers.extra_key].historical_count)
+    borrowers = get_users(state.extra[Borrowers.extra_key].historical_count)
     if args["options"] and "interval" in args["options"]:
         interval = int(args["options"]["interval"])
     else:
         interval = 100
-    x = [block_dates[v[0]] for v in non_zero_users[::interval]]
-    y = [v[1] for v in non_zero_users[::interval]]
+
+    x1, y1 = get_xy(suppliers, interval)
+    x2, y2 = get_xy(borrowers, interval)
+
     plt.xticks(rotation=45)
     plt.xlabel("Date")
-    plt.ylabel("Number of borrowers")
-    plt.plot_date(x, y, fmt="-")
+    plt.ylabel("Count")
+    plt.plot(x1, y1, "-", label="Suppliers")
+    plt.plot(x2, y2, "-", label="Borrowers")
+    ax = plt.gca()
+    ax.yaxis.set_major_formatter(INT_FORMATTER)
     plt.tight_layout()
+    plt.legend()
+
     output_plot(args.get("output"))
 
 
