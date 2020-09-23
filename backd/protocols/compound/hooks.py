@@ -226,6 +226,18 @@ class LiquidationAmounts(Hook):
 class LiquidationAmountsWithTime(LiquidationAmounts):
     extra_key = "liquidation-with-time"
 
+    # do not check accounts with > 20% overcollateral unless they are modified
+    threshold = 1.2
+    ttl = 100  # blocks before removing from above threshold
+
+    _user_mapping = {
+        "Borrow": ["borrower"],
+        "Mint": ["minter"],
+        "Redeem": ["redeemer"],
+        "RepayBorrow": ["borrower"],
+        "LiquidateBorrow": ["borrower", "liquidator"],
+    }
+
     @classmethod
     def list_dependencies(cls):
         return [Borrowers.registered_name]
@@ -233,6 +245,9 @@ class LiquidationAmountsWithTime(LiquidationAmounts):
     def __init__(self):
         super().__init__()
         self.liquidatable = {}
+        self.above_threshold = set()
+        self.above_threshold_blocks = {}
+        self.touched = set()
 
     def get_liquidation(self, state: CompoundState, event: dict):
         liquidation = super().get_liquidation(state, event)
@@ -244,13 +259,41 @@ class LiquidationAmountsWithTime(LiquidationAmounts):
         liquidation["block_ellapsed"] = block_ellapsed
         return liquidation
 
+    def block_start(self, state: CompoundState, block_number: int):
+        self.touched = set()
+        self.above_threshold_blocks[block_number] = []
+
+    def event_start(self, state: CompoundState, event: dict):
+        if event["event"] in self._user_mapping:
+            self.touched |= self._get_users(event)
+
+    def _get_users(self, event: dict):
+        return set(
+            event["returnValues"][key] for key in self._user_mapping[event["event"]]
+        )
+
     def block_end(self, state: CompoundState, block_number: int):
         current_users = state.extra[Borrowers.extra_key].current_users
         liquidatable = set()
-        for user in current_users:
+
+        block_to_remove = block_number - self.ttl
+        if block_to_remove in self.above_threshold_blocks:
+            for user in self.above_threshold_blocks[block_to_remove]:
+                self.above_threshold.discard(user)
+            del self.above_threshold_blocks[block_to_remove]
+
+        # avoid going through all the users
+        to_check = (current_users - self.above_threshold) | self.touched
+
+        for user in to_check:
             supply, borrow = state.compute_user_position(user)
             if borrow > supply:
                 liquidatable.add(user)
+            elif borrow > 0 and supply / borrow > self.threshold:
+                if user not in self.above_threshold:
+                    self.above_threshold.add(user)
+                    self.above_threshold_blocks[block_number].append(user)
+
         # add new liquidatable
         for user in liquidatable:
             self.liquidatable.setdefault(user, block_number)
