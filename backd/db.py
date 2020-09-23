@@ -33,7 +33,7 @@ def create_indices():
 
     db.chi_values.create_index("blockNumber", unique=True)
 
-    db.blocks.create_index("number", unique=True)
+    db.blocks.create_index("blockNumber", unique=True)
 
     db.prices.create_index("blockNumber", unique=True)
 
@@ -50,7 +50,9 @@ def count_events():
 def get_block_dates():
     projection = {"_id": False, "blockNumber": True, "timestamp": True}
     return {
-        b["blockNumber"]: dt.datetime.fromtimestamp(int(b["timestamp"]), dt.timezone.utc)
+        b["blockNumber"]: dt.datetime.fromtimestamp(
+            int(b["timestamp"]), dt.timezone.utc
+        )
         for b in db.blocks.find(projection=projection)
     }
 

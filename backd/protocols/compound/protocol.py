@@ -1,6 +1,8 @@
 import datetime as dt
 from functools import lru_cache
-from typing import Iterable
+from typing import Callable, Iterable
+
+import pymongo
 
 from ... import db, utils
 from ...entities import PointInTime
@@ -75,11 +77,13 @@ class CompoundProtocol(Protocol):
             }
 
     def fetch_ds_values(self, condition: dict) -> Iterable[dict]:
-        cursor = db.db.ds_values.find(condition, no_cursor_timeout=True).sort(
-            "blockNumber"
-        )
-        for row in cursor:
-            yield {
+        def make_cursor(condition: dict) -> pymongo.CursorType:
+            return db.db.ds_values.find(condition, no_cursor_timeout=True).sort(
+                "blockNumber"
+            )
+
+        def make_event(row: dict) -> dict:
+            return {
                 "event": "InvertedPricePosted",
                 "address": row["address"],
                 "returnValues": {
@@ -90,14 +94,17 @@ class CompoundProtocol(Protocol):
                 "transactionIndex": -1,
                 "logIndex": -1,
             }
-        cursor.close()
+
+        yield from self.safe_yield_cursor(condition, make_cursor, make_event)
 
     def fetch_chi_values(self, condition: dict) -> Iterable[dict]:
-        cursor = db.db.chi_values.find(condition, no_cursor_timeout=True).sort(
-            "blockNumber"
-        )
-        for row in cursor:
-            yield {
+        def make_cursor(condition: dict) -> pymongo.CursorType:
+            return db.db.chi_values.find(condition, no_cursor_timeout=True).sort(
+                "blockNumber"
+            )
+
+        def make_event(row: dict) -> dict:
+            return {
                 "event": "ChiUpdated",
                 "address": DSR_ADDRESS,
                 "returnValues": {
@@ -107,12 +114,17 @@ class CompoundProtocol(Protocol):
                 "transactionIndex": -5,
                 "logIndex": -5,
             }
-        cursor.close()
+
+        yield from self.safe_yield_cursor(condition, make_cursor, make_event)
 
     def fetch_external_prices(self, condition: dict) -> Iterable[dict]:
-        cursor = db.prices().find(condition, no_cursor_timeout=True).sort("blockNumber")
-        for row in cursor:
-            yield {
+        def make_cursor(condition: dict) -> pymongo.CursorType:
+            return (
+                db.prices().find(condition, no_cursor_timeout=True).sort("blockNumber")
+            )
+
+        def make_event(row: dict) -> dict:
+            return {
                 "event": "ExternalPriceUpdated",
                 "address": oracles.PriceOracleV1.registered_name,
                 "returnValues": {
@@ -123,15 +135,18 @@ class CompoundProtocol(Protocol):
                 "transactionIndex": -10,
                 "logIndex": -10,
             }
-        cursor.close()
+
+        yield from self.safe_yield_cursor(condition, make_cursor, make_event)
 
     def fetch_block_timestamps(self, condition: dict) -> Iterable[dict]:
-        projection = {"blockNumber": 1, "timestamp": 1}
-        cursor = db.db.blocks.find(
-            condition, projection=projection, no_cursor_timeout=True
-        ).sort("blockNumber")
-        for row in cursor:
-            yield {
+        def make_cursor(condition: dict) -> pymongo.CursorType:
+            projection = {"blockNumber": 1, "timestamp": 1}
+            return db.db.blocks.find(
+                condition, projection=projection, no_cursor_timeout=True
+            ).sort("blockNumber")
+
+        def make_event(row: dict) -> dict:
+            return {
                 "event": "TimestampUpdated",
                 "address": NULL_ADDRESS,
                 "returnValues": {
@@ -143,6 +158,29 @@ class CompoundProtocol(Protocol):
                 "transactionIndex": -1000,
                 "logIndex": -1000,
             }
+
+        yield from self.safe_yield_cursor(condition, make_cursor, make_event)
+
+    def safe_yield_cursor(
+        self,
+        condition: dict,
+        make_cursor: Callable[[dict], pymongo.CursorType],
+        make_event: Callable[[dict], dict],
+    ) -> Iterable[dict]:
+        cursor = make_cursor(condition)
+        while True:
+            try:
+                row = cursor.next()
+                event = make_event(row)
+                yield event
+            except StopIteration:
+                break
+            except pymongo.errors.CursorNotFound:
+                condition.setdefault("blockNumber", {})
+                if "$gte" in condition["blockNumber"]:
+                    del condition["blockNumber"]["$gt"]
+                condition["blockNumber"]["$gt"] = event["blockNumber"]
+                cursor = make_cursor(condition)
         cursor.close()
 
     def make_block_range_condition(
