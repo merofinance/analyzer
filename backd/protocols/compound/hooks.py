@@ -243,7 +243,7 @@ class LiquidationAmounts(Hook):
             "token_seized": token_seized,
         }
 
-    def event_start(self, state: CompoundState, event: dict):
+    def event_end(self, state: CompoundState, event: dict):
         if event["event"] != "LiquidateBorrow":
             return
         self.liquidations.append(self.get_liquidation(state, event))
