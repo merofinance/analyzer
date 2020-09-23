@@ -1,10 +1,11 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 from cycler import cycler
 from matplotlib.ticker import FuncFormatter
 
 from ... import constants, db
-from ...plot_utils import DEFAULT_PALETTE
+from ...plot_utils import COLORS, DEFAULT_PALETTE
 from .entities import CompoundState
 from .hooks import Borrowers, LiquidationAmounts, Suppliers, UsersBorrowSupply
 
@@ -156,6 +157,56 @@ def plot_liquidations_over_time(args: dict):
     ax.legend(l1 + l2, ["Count", "Amount"], loc="upper left")
     plt.tight_layout()
     output_plot(args.get("output"))
+
+
+def plot_supply_borrow_distribution(args: dict):
+    state = CompoundState.load(args["state"])
+    users = state.compute_unique_users()
+    prop = get_option(args, "property", default="supply")
+
+    values = []
+    threshold = get_option(args, "threshold", transform=int, default=100)
+    for user in users:
+        total_supply, total_borrow = state.compute_user_position(user)
+        value = total_supply if prop == "supply" else total_borrow
+        if value > threshold * 10 ** 18:
+            values.append(value / 1e18)
+
+    bucket_size = get_option(args, "bucket_size", transform=int, default=10)
+    total = sum(values)
+    values = sorted(values)
+    padding = [0] * (bucket_size - len(values) % bucket_size)
+    values = np.array(padding + values)
+    values = np.sum(values.reshape(-1, bucket_size), axis=1)
+    cum_values = [sum(values[:i]) for i in range(0, len(values) + 1)]
+
+    heights = [v / total for v in cum_values]
+    x = np.arange(len(heights))
+    ax1 = plt.gca()
+    ax1.bar(x, heights, width=1.0, color=COLORS["gray"])
+
+    ax1.set_yticks(list(ax1.get_yticks())[:-1])
+    ax1.set_yticklabels(["{0:,}".format(int(total * v)) for v in ax1.get_yticks()])
+    ax1.set_ylabel("Amount of USD")
+
+    ax1.set_xlabel("Number of users")
+    ax1.tick_params(axis="x", rotation=45)
+
+    interval = get_option(args, "interval", transform=int, default=50)
+    ticks = np.append(x[::interval][:-1], x[-1])
+    ax2 = ax1.twinx()
+    ax2.bar(x, heights, width=1.0, color=COLORS["gray"])
+
+    ax2.set_yticks(list(ax2.get_yticks())[:-1])  # use FixedLocator
+    ax2.set_yticklabels(["{0}%".format(int(v * 100)) for v in ax2.get_yticks()])
+    ax2.set_ylabel("Percentage of USD")
+
+    ax2.set_xticks(ticks)
+    ax2.set_xticklabels(ticks * bucket_size)
+
+    plt.tight_layout()
+
+    output_plot(args["output"])
 
 
 def output_plot(output: str = None):

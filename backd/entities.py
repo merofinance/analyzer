@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import datetime as dt
 import pickle
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Dict, Iterator, List
+from typing import Dict, Iterator, List, Set, Type, TypeVar
 
 from .base_factory import BaseFactory
 
@@ -179,6 +181,12 @@ class State:
     oracles: Oracles = None
     extra: dict = None  # used by hooks to persist data to state
 
+    def compute_unique_users(self) -> Set[str]:
+        users = set()
+        for market in self.markets:
+            users |= market.users.keys()
+        return users
+
     def __post_init__(self):
         if self.markets is None:
             self.markets = Markets()
@@ -188,6 +196,9 @@ class State:
             self.extra = {}
 
     @classmethod
-    def load(cls, filepath: str) -> "State":
+    def load(cls: Type[T], filepath: str) -> T:
         with open(filepath, "rb") as f:
             return pickle.load(f)
+
+
+T = TypeVar("T", bound=State)
