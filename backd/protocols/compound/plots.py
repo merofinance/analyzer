@@ -7,12 +7,19 @@ from matplotlib.ticker import FuncFormatter
 from ... import constants, db
 from ...plot_utils import COLORS, DEFAULT_PALETTE
 from .entities import CompoundState
-from .hooks import Borrowers, LiquidationAmounts, Suppliers, UsersBorrowSupply
+from .hooks import (
+    Borrowers,
+    LiquidationAmounts,
+    LiquidationAmountsWithTime,
+    Suppliers,
+    UsersBorrowSupply,
+)
 
 INT_FORMATTER = FuncFormatter(lambda x, _: "{:,}".format(int(x)))
 LARGE_MONETARY_FORMATTER = FuncFormatter(lambda x, _: "{:,}M".format(x // 1e6))
 
 mpl.rcParams["axes.prop_cycle"] = cycler(color=DEFAULT_PALETTE)
+mpl.rcParams["font.size"] = 12
 
 
 def get_option(args: dict, key: str, transform=lambda x: x, default=None):
@@ -182,6 +189,7 @@ def plot_supply_borrow_distribution(args: dict):
 
     heights = [v / total for v in cum_values]
     x = np.arange(len(heights))
+
     ax1 = plt.gca()
     ax1.bar(x, heights, width=1.0, color=COLORS["gray"])
 
@@ -203,6 +211,34 @@ def plot_supply_borrow_distribution(args: dict):
 
     ax2.set_xticks(ticks)
     ax2.set_xticklabels(ticks * bucket_size)
+
+    plt.tight_layout()
+
+    output_plot(args["output"])
+
+
+def plot_time_to_liquidation(args: dict):
+    state = CompoundState.load(args["state"])
+    data = state.extra[LiquidationAmountsWithTime.extra_key]
+    seized_by_ellapsed = data.groupby("block_ellapsed").sum().usd_seized / 1e18
+    cumsum = seized_by_ellapsed.iloc[:15].cumsum()
+
+    total = data.usd_seized.sum() / 1e18
+
+    x = cumsum.index
+    heights = cumsum.values
+
+    ax1 = plt.gca()
+    ax1.set_xticks(x)
+    ax1.bar(x, heights, width=1.0, color=COLORS["gray"])
+    ax1.set_xlabel("Number of blocks ellapsed")
+    ax1.set_ylabel("Amount of USD")
+    ax1.yaxis.set_major_formatter(LARGE_MONETARY_FORMATTER)
+    ax2 = ax1.twinx()
+    ax2.bar(x, heights / total, width=1.0, color=COLORS["gray"])
+    ax2.set_yticks(ax2.get_yticks())
+    ax2.set_yticklabels(["{0}%".format(int(v * 100)) for v in ax2.get_yticks()])
+    ax2.set_ylabel("Percentage of USD")
 
     plt.tight_layout()
 
