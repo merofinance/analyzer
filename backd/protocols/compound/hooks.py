@@ -154,21 +154,60 @@ class LiquidationAmounts(Hook):
     def global_end(self, state: CompoundState):
         state.extra[self.extra_key] = pd.DataFrame(self.liquidations)
 
-    def event_start(self, state: CompoundState, event: dict):
-        if event["event"] != "LiquidateBorrow":
-            return
+    def get_liquidation(self, state: CompoundState, event: dict):
         args = event["returnValues"]
         cmarket = state.markets.find_by_address(args["cTokenCollateral"])
         token_seized = int(args["seizeTokens"])
         usd_seized = state.ctoken_to_usd(token_seized, cmarket)
-        self.liquidations.append(
-            {
-                "block_number": event["blockNumber"],
-                "timestamp": state.timestamp,
-                "market": cmarket.address,
-                "transaction_hash": event["transactionHash"],
-                "transaction_index": event["transactionIndex"],
-                "usd_seized": usd_seized,
-                "token_seized": token_seized,
-            }
-        )
+        return {
+            "block_number": event["blockNumber"],
+            "timestamp": state.timestamp,
+            "market": cmarket.address,
+            "transaction_hash": event["transactionHash"],
+            "transaction_index": event["transactionIndex"],
+            "usd_seized": usd_seized,
+            "token_seized": token_seized,
+        }
+
+    def event_start(self, state: CompoundState, event: dict):
+        if event["event"] != "LiquidateBorrow":
+            return
+        self.liquidations.append(self.get_liquidation(state, event))
+
+
+@Hook.register("liquidation-with-time")
+class LiquidationAmountsWithTime(LiquidationAmounts):
+    extra_key = "liquidation-with-time"
+
+    @classmethod
+    def list_dependencies(cls):
+        return ["non-zero-users"]
+
+    def __init__(self):
+        super().__init__()
+        self.liquidatable = {}
+
+    def get_liquidation(self, state: CompoundState, event: dict):
+        liquidation = super().get_liquidation(state, event)
+        block_ellapsed = 0
+        borrower = event["returnValues"]["borrower"]
+        if borrower in self.liquidatable:
+            block_ellapsed = event["blockNumber"] - self.liquidatable[borrower]
+            del self.liquidatable[borrower]
+        liquidation["block_ellapsed"] = block_ellapsed
+        return liquidation
+
+    def block_end(self, state: CompoundState, block_number: int):
+        current_users = state.extra[NonZeroUsers.extra_key].current_users
+        liquidatable = set()
+        for user in current_users:
+            supply, borrow = state.compute_user_position(user)
+            if borrow > supply:
+                liquidatable.add(user)
+        # add new liquidatable
+        for user in liquidatable:
+            self.liquidatable.setdefault(user, block_number)
+
+        # remove users not anymore liquidatable
+        for user in self.liquidatable.keys() - liquidatable:
+            del self.liquidatable[user]
