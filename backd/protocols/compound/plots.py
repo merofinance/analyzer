@@ -14,7 +14,7 @@ LARGE_MONETARY_FORMATTER = FuncFormatter(lambda x, _: "{:,}M".format(x // 1e6))
 mpl.rcParams["axes.prop_cycle"] = cycler(color=DEFAULT_PALETTE)
 
 
-def plot_borrowers_over_time(args: dict):
+def plot_suppliers_and_borrowers_over_time(args: dict):
     state = CompoundState.load(args["state"])
     block_dates = db.get_block_dates()
 
@@ -42,13 +42,13 @@ def plot_borrowers_over_time(args: dict):
 
     plt.xticks(rotation=45)
     plt.xlabel("Date")
-    plt.ylabel("Count")
+    plt.ylabel("Number of accounts")
     plt.plot(x1, y1, "-", label="Suppliers")
     plt.plot(x2, y2, "-", label="Borrowers")
     ax = plt.gca()
     ax.yaxis.set_major_formatter(INT_FORMATTER)
     plt.tight_layout()
-    plt.legend()
+    plt.legend(loc="upper left")
 
     output_plot(args.get("output"))
 
