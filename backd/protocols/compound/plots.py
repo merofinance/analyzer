@@ -14,6 +14,12 @@ LARGE_MONETARY_FORMATTER = FuncFormatter(lambda x, _: "{:,}M".format(x // 1e6))
 mpl.rcParams["axes.prop_cycle"] = cycler(color=DEFAULT_PALETTE)
 
 
+def get_option(args: dict, key: str, transform=lambda x: x, default=None):
+    if args.get("options") and key in args["options"]:
+        return transform(args["options"][key])
+    return default
+
+
 def plot_suppliers_and_borrowers_over_time(args: dict):
     state = CompoundState.load(args["state"])
     block_dates = db.get_block_dates()
@@ -32,10 +38,7 @@ def plot_suppliers_and_borrowers_over_time(args: dict):
 
     suppliers = get_users(state.extra[Suppliers.extra_key].historical_count)
     borrowers = get_users(state.extra[Borrowers.extra_key].historical_count)
-    if args["options"] and "interval" in args["options"]:
-        interval = int(args["options"]["interval"])
-    else:
-        interval = 100
+    interval = get_option(args, "interval", transform=int, default=100)
 
     x1, y1 = get_xy(suppliers, interval)
     x2, y2 = get_xy(borrowers, interval)
@@ -55,16 +58,43 @@ def plot_suppliers_and_borrowers_over_time(args: dict):
 
 def plot_supply_borrow_over_time(args: dict):
     state = CompoundState.load(args["state"])
+    supply_borrows = state.extra["supply-borrow"].set_index("timestamp")
+
+    sampling_period = get_option(args, "period", default="1h")
+    key_mapping = {
+        "borrows": "Total borrowed",
+        "supply": "Total supply",
+        "underlying": "Total collateral",
+    }
+    for key, new_key in key_mapping.items():
+        supply_borrows[new_key] = supply_borrows[key] / 1e18
+
+    # TODO: check this is actually doing mean per market
+    # within a time bin and then summing all the means
+    means = (
+        supply_borrows.groupby("market").resample(sampling_period).mean().sum(level=1)
+    )
+    ax = means[list(key_mapping.values())].plot()
+    ax.yaxis.set_major_formatter(LARGE_MONETARY_FORMATTER)
+    ax.set_ylabel("Amount (USD)")
+    ax.set_xlabel("Date")
+    output_plot(args.get("output"))
+
+
+def plot_supply_borrow_ratios_over_time(args: dict):
+    state = CompoundState.load(args["state"])
     block_dates = db.get_block_dates()
     users_borrow_supply = state.extra[UsersBorrowSupply.extra_key]
 
     blocks = [block for block in users_borrow_supply if block in block_dates]
     x = [block_dates[block] for block in blocks]
 
-    if args["options"] and "thresholds" in args["options"]:
-        thresholds = [float(v) for v in args["options"]["thresholds"].split(",")]
-    else:
-        thresholds = [1.0, 1.05, 1.1, 1.25, 1.5, 2.0]
+    thresholds = get_option(
+        args,
+        "thresholds",
+        transform=lambda x: [float(v) for v in x.split(",")],
+        default=[1.0, 1.05, 1.1, 1.25, 1.5, 2.0],
+    )
     labels = ["< {0:.2f}%".format(t * 100) for t in thresholds]
     labels.append("$\\geq$ {0:.2f}%".format(thresholds[-1] * 100))
 

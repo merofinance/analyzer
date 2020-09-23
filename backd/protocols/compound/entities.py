@@ -119,28 +119,36 @@ class CompoundState(State):
 
         return (sum_collateral, sum_borrows)
 
-    def compute_total_borrows(self) -> int:
-        sum_borrows = 0
+    def compute_borrows_per_market(self) -> Dict[str, float]:
+        borrows = {}
         for market in self.markets:
             oracle_price = self.oracles.current.get_underlying_price(market.address)
-            sum_borrows += oracle_price * market.balances.total_borrowed / EXP_SCALE
-        return sum_borrows
+            borrows[market.address] = (
+                oracle_price * market.balances.total_borrowed / EXP_SCALE
+            )
+        return borrows
 
-    def compute_total_underlying(self) -> int:
-        sum_underlying = 0
+    def compute_total_borrows(self) -> float:
+        return sum(self.compute_borrows_per_market().values())
+
+    def compute_underlying_per_market(self) -> Dict[str, float]:
+        underlying = {}
         for market in self.markets:
             oracle_price = self.oracles.current.get_underlying_price(market.address)
-            sum_underlying += oracle_price * market.get_cash() / EXP_SCALE
-        return sum_underlying
+            underlying[market.address] = oracle_price * market.get_cash() / EXP_SCALE
+        return underlying
 
-    def compute_supply_per_market(self) -> int:
+    def compute_total_underlying(self) -> float:
+        return sum(self.compute_underlying_per_market().values())
+
+    def compute_supply_per_market(self) -> Dict[str, float]:
         markets = {}
         for market in self.markets:
             token_balance = market.balances.token_balance
             markets[market.address] = self.ctoken_to_usd(token_balance, market)
         return markets
 
-    def compute_total_supply(self) -> int:
+    def compute_total_supply(self) -> float:
         return sum(self.compute_supply_per_market().values())
 
     def ctoken_to_usd(self, amount: int, market: Market) -> float:

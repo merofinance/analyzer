@@ -95,6 +95,33 @@ class Suppliers(Hook):
         )
 
 
+@Hook.register("supply-borrow")
+class SupplyBorrow(Hook):
+    extra_key = "supply-borrow"
+
+    def __init__(self):
+        self.supply_borrows = []
+
+    def global_end(self, state: CompoundState):
+        state.extra[self.extra_key] = pd.DataFrame(self.supply_borrows)
+
+    def block_end(self, state: CompoundState, block_number: int):
+        supply_per_market = state.compute_supply_per_market()
+        borrow_per_market = state.compute_borrows_per_market()
+        underlying_per_market = state.compute_underlying_per_market()
+        for market in supply_per_market:
+            self.supply_borrows.append(
+                {
+                    "block": block_number,
+                    "timestamp": state.timestamp,
+                    "market": market,
+                    "supply": supply_per_market[market],
+                    "borrows": borrow_per_market[market],
+                    "underlying": underlying_per_market[market],
+                }
+            )
+
+
 @Hook.register("leverage-spirals")
 class LeverageSpirals(Hook):
     extra_key = "leverage-spirals"
