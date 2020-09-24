@@ -290,7 +290,7 @@ class LiquidationAmountsWithTime(LiquidationAmounts):
 
     def __init__(self):
         super().__init__()
-        self.liquidatable = {}
+        self.liquidable = {}
         self.above_threshold = set()
         self.above_threshold_blocks = {}
         self.touched = set()
@@ -299,9 +299,9 @@ class LiquidationAmountsWithTime(LiquidationAmounts):
         liquidation = super().get_liquidation(state, event)
         block_ellapsed = 0
         borrower = event["returnValues"]["borrower"]
-        if borrower in self.liquidatable:
-            block_ellapsed = event["blockNumber"] - self.liquidatable[borrower]
-            del self.liquidatable[borrower]
+        if borrower in self.liquidable:
+            block_ellapsed = event["blockNumber"] - self.liquidable[borrower]
+            del self.liquidable[borrower]
         liquidation["block_ellapsed"] = block_ellapsed
         return liquidation
 
@@ -320,7 +320,7 @@ class LiquidationAmountsWithTime(LiquidationAmounts):
 
     def block_end(self, state: CompoundState, block_number: int):
         current_users = state.extra[Borrowers.extra_key].current_users
-        liquidatable = set()
+        liquidable = set()
 
         block_to_remove = block_number - self.ttl
         if block_to_remove in self.above_threshold_blocks:
@@ -334,16 +334,16 @@ class LiquidationAmountsWithTime(LiquidationAmounts):
         for user in to_check:
             supply, borrow = state.compute_user_position(user)
             if borrow > supply:
-                liquidatable.add(user)
+                liquidable.add(user)
             elif borrow > 0 and supply / borrow > self.threshold:
                 if user not in self.above_threshold:
                     self.above_threshold.add(user)
                     self.above_threshold_blocks[block_number].append(user)
 
-        # add new liquidatable
-        for user in liquidatable:
-            self.liquidatable.setdefault(user, block_number)
+        # add new liquidable
+        for user in liquidable:
+            self.liquidable.setdefault(user, block_number)
 
-        # remove users not anymore liquidatable
-        for user in self.liquidatable.keys() - liquidatable:
-            del self.liquidatable[user]
+        # remove users not anymore liquidale
+        for user in self.liquidable.keys() - liquidable:
+            del self.liquidable[user]

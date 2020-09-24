@@ -90,6 +90,40 @@ def plot_supply_borrow_over_time(args: dict):
     output_plot(args.get("output"))
 
 
+def plot_liquidable_over_time(args: dict):
+    block_dates = db.get_block_dates()
+
+    def get_data(state_path: str):
+        state = CompoundState.load(state_path)
+        users_borrow_supply = state.extra[UsersBorrowSupply.extra_key]
+
+        blocks = [block for block in users_borrow_supply if block in block_dates]
+        x = [block_dates[block] for block in blocks]
+        y = []
+
+        for block in blocks:
+            block_total = 0
+            users = users_borrow_supply[block]
+            for supply, borrow in users.values():
+                if borrow > 0 and supply / borrow < 1:
+                    block_total += supply / constants.DEFAULT_DECIMALS
+            y.append(block_total)
+        return x, y
+
+    x, y = get_data(args["state"])
+
+    ax = plt.gca()
+    ax.plot_date(x, y, width="1.0")
+    ax.yaxis.set_major_formatter(LARGE_MONETARY_FORMATTER)
+    ax.set_ylabel("Liquidable amount (USD)")
+    ax.set_xlabel("Date")
+    ax.tick_params(axis="x", rotation=45)
+
+    plt.tight_layout()
+
+    output_plot(args["output"])
+
+
 def plot_supply_borrow_ratios_over_time(args: dict):
     state = CompoundState.load(args["state"])
     block_dates = db.get_block_dates()
