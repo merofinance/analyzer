@@ -1,6 +1,9 @@
+import datetime as dt
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from cycler import cycler
 from matplotlib.ticker import FuncFormatter
 
@@ -22,13 +25,7 @@ mpl.rcParams["axes.prop_cycle"] = cycler(color=DEFAULT_PALETTE)
 mpl.rcParams["font.size"] = 12
 
 
-def get_option(args: dict, key: str, transform=lambda x: x, default=None):
-    if args.get("options") and key in args["options"]:
-        return transform(args["options"][key])
-    return default
-
-
-def plot_suppliers_and_borrowers_over_time(args: dict):
+def plot_suppliers_borrowers_over_time(args: dict):
     state = CompoundState.load(args["state"])
     block_dates = db.get_block_dates()
 
@@ -46,7 +43,7 @@ def plot_suppliers_and_borrowers_over_time(args: dict):
 
     suppliers = get_users(state.extra[Suppliers.extra_key].historical_count)
     borrowers = get_users(state.extra[Borrowers.extra_key].historical_count)
-    interval = get_option(args, "interval", transform=int, default=100)
+    interval = args["interval"]
 
     x1, y1 = get_xy(suppliers, interval)
     x2, y2 = get_xy(borrowers, interval)
@@ -68,7 +65,7 @@ def plot_supply_borrow_over_time(args: dict):
     state = CompoundState.load(args["state"])
     supply_borrows = state.extra["supply-borrow"].set_index("timestamp")
 
-    sampling_period = get_option(args, "period", default="1h")
+    sampling_period = args["resample"]
     key_mapping = {
         "borrows": "Total borrowed",
         "supply": "Total supply",
@@ -91,35 +88,31 @@ def plot_supply_borrow_over_time(args: dict):
 
 
 def plot_liquidable_over_time(args: dict):
-    block_dates = db.get_block_dates()
-
-    def get_data(state_path: str):
-        state = CompoundState.load(state_path)
-        users_borrow_supply = state.extra[UsersBorrowSupply.extra_key]
-
-        blocks = [block for block in users_borrow_supply if block in block_dates]
-        x = [block_dates[block] for block in blocks]
-        y = []
-
-        for block in blocks:
-            block_total = 0
-            users = users_borrow_supply[block]
-            for supply, borrow in users.values():
-                if borrow > 0 and supply / borrow < 1:
-                    block_total += supply / constants.DEFAULT_DECIMALS
-            y.append(block_total)
-        return x, y
-
-    x, y = get_data(args["state"])
-
     ax = plt.gca()
-    ax.plot_date(x, y, width="1.0")
+    styles = args["styles"]
+
+    max_value = 0
+    for i, filepath in enumerate(args["files"]):
+        df = pd.read_csv(filepath, parse_dates=[0]).set_index("timestamp")
+        label = args["labels"][i]
+        df.resample(args["resample"]).max().value.plot(
+            style=styles[i], ax=ax, label=label
+        )
+        max_value = max(df.value.max(), max_value)
+    ax.set_ylim((0, int(max_value * 1.1)))
+    x_start, x_end = ax.get_xlim()
+    expand = (x_end - x_start) * 0.05
+    ax.set_xlim((x_start - expand, x_end + expand))
     ax.yaxis.set_major_formatter(LARGE_MONETARY_FORMATTER)
+    ax.vlines(
+        dt.datetime(2020, 6, 15), *ax.get_ylim(), colors=COLORS["gray"], linestyles="--"
+    )
     ax.set_ylabel("Liquidable amount (USD)")
     ax.set_xlabel("Date")
     ax.tick_params(axis="x", rotation=45)
+    plt.legend()
 
-    plt.tight_layout()
+    plt.tight_layout(pad=1.2)
 
     output_plot(args["output"])
 
@@ -132,12 +125,7 @@ def plot_supply_borrow_ratios_over_time(args: dict):
     blocks = [block for block in users_borrow_supply if block in block_dates]
     x = [block_dates[block] for block in blocks]
 
-    thresholds = get_option(
-        args,
-        "thresholds",
-        transform=lambda x: [float(v) for v in x.split(",")],
-        default=[1.0, 1.05, 1.1, 1.25, 1.5, 2.0],
-    )
+    thresholds = args["thresholds"]
     labels = ["< {0:.2f}%".format(t * 100) for t in thresholds]
     labels.append("$\\geq$ {0:.2f}%".format(thresholds[-1] * 100))
 
@@ -210,17 +198,17 @@ def plot_liquidations_over_time(args: dict):
 def plot_supply_borrow_distribution(args: dict):
     state = CompoundState.load(args["state"])
     users = state.compute_unique_users()
-    prop = get_option(args, "property", default="supply")
+    prop = args["property"]
 
     values = []
-    threshold = get_option(args, "threshold", transform=int, default=100)
+    threshold = args["threshold"]
     for user in users:
         total_supply, total_borrow = state.compute_user_position(user)
         value = total_supply if prop == "supply" else total_borrow
         if value > threshold * 10 ** 18:
             values.append(value / 1e18)
 
-    bucket_size = get_option(args, "bucket_size", transform=int, default=10)
+    bucket_size = args["bucket_size"]
     total = sum(values)
     values = sorted(values)
     padding = [0] * (bucket_size - len(values) % bucket_size)
@@ -241,7 +229,7 @@ def plot_supply_borrow_distribution(args: dict):
     ax1.set_xlabel("Number of users")
     ax1.tick_params(axis="x", rotation=45)
 
-    interval = get_option(args, "interval", transform=int, default=50)
+    interval = args["interval"]
     ticks = np.append(x[::interval][:-1], x[-1])
     ax2 = ax1.twinx()
     ax2.bar(x, heights, width=1.0, color=COLORS["gray"])
@@ -262,7 +250,7 @@ def plot_time_to_liquidation(args: dict):
     state = CompoundState.load(args["state"])
     data = state.extra[LiquidationAmountsWithTime.extra_key]
     seized_by_ellapsed = data.groupby("block_ellapsed").sum().usd_seized
-    max_blocks = get_option(args, "max_blocks", transform=int, default=15)
+    max_blocks = args["max_blocks"]
     selected_blocks = seized_by_ellapsed.iloc[:max_blocks]
     cumsum = selected_blocks.cumsum() / 1e18
 

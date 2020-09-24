@@ -10,7 +10,7 @@ from ...event_processor import Processor
 from ...hook import Hooks
 from ...protocol import Protocol
 from . import oracles  # pylint: disable=unused-import
-from . import plots
+from . import plots, exporter
 from .constants import DS_VALUES_MAPPING, DSR_ADDRESS, NULL_ADDRESS
 from .entities import CompoundState
 from .processor import CompoundProcessor
@@ -207,3 +207,6 @@ class CompoundProtocol(Protocol):
 
     def get_plots(self):
         return plots
+
+    def get_exporter(self):
+        return exporter

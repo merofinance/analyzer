@@ -29,3 +29,7 @@ class Protocol(ABC, BaseFactory):
     @abstractmethod
     def get_plots(self):
         pass
+
+    @abstractmethod
+    def get_exporter(self):
+        pass

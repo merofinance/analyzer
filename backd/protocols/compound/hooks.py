@@ -50,6 +50,10 @@ class Borrowers(Hook):
         )
 
 
+class NonZeroUsers:
+    HookState = Borrowers.HookState
+
+
 @Hook.register("suppliers")
 class Suppliers(Hook):
     extra_key = "suppliers"
