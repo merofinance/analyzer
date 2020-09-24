@@ -110,7 +110,7 @@ def plot_liquidable_over_time(args: dict):
     ax.set_ylabel("Liquidable amount (USD)")
     ax.set_xlabel("Date")
     ax.tick_params(axis="x", rotation=45)
-    plt.legend()
+    plt.legend(loc="upper left")
 
     plt.tight_layout(pad=1.2)
 

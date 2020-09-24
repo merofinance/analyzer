@@ -47,13 +47,9 @@ def parse_hook(raw_hook: str) -> Hook:
         raise ValueError(f"invalid hook syntax {raw_hook}")
     hook_name = hook_match.group(1)
     raw_args = hook_match.group(2)
-
-    def _process_arg(arg: str):
-        return json.loads(arg.strip().replace("'", '"'))
-
     args = []
     if raw_args:
-        args = [_process_arg(arg) for arg in raw_args.split(",")]
+        args = json.loads("[" + raw_args.replace("'", '"') + "]")
     return Hook.get(hook_name)(*args)
 
 
