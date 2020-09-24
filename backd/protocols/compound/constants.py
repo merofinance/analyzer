@@ -33,6 +33,9 @@ CDAI_DSR_IMPLEMENTATION = "0xbb8be4772faa655c255309afc3c5207aa7b896fd"
 DSR_ADDRESS = "0x197e90f9fad81970ba7976f33cbd77088e5d7cf7"
 PRICE_V1_ORACLE_ADDRESS = "0x02557a5e05defeffd4cae6d83ea3d173b272c904"
 
+# Used by hook and state to simulate price drops
+PRICE_RATIOS_KEY = "price-ratios"
+
 MARKETS = [
     {
         "address": "0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5",

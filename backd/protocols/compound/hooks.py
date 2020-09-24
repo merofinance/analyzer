@@ -1,10 +1,12 @@
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Dict, List, Set, Tuple
+from decimal import Decimal
+from typing import Dict, List, Set, Tuple, Union
 
 import pandas as pd
 
 from ...hook import Hook
+from .constants import CETH_ADDRESS, PRICE_RATIOS_KEY
 from .entities import CompoundState
 
 
@@ -218,6 +220,22 @@ class UsersBorrowSupply(Hook):
             self.hook_state[block_number][user] = state.compute_user_position(user)
 
 
+@Hook.register("users-borrow-supply-sensitivity")
+class UsersBorrowSupplySensitivity(UsersBorrowSupply):
+    ratio_key = PRICE_RATIOS_KEY
+
+    def __init__(self, ratios: Dict[str, Union[Decimal, str]] = None):
+        super().__init__()
+        if ratios is None:
+            ratios = {}
+        ratios = {market: Decimal(ratio) for market, ratio in ratios.items()}
+        self.price_ratios = ratios
+
+    def global_start(self, state: CompoundState):
+        super().global_start(state)
+        state.extra[self.ratio_key] = self.price_ratios
+
+
 @Hook.register("liquidation-stats")
 class LiquidationAmounts(Hook):
     extra_key = "liquidation-stats"
@@ -241,6 +259,7 @@ class LiquidationAmounts(Hook):
             "transaction_index": event["transactionIndex"],
             "usd_seized": usd_seized,
             "token_seized": token_seized,
+            "eth_price": state.oracles.current.get_underlying_price(CETH_ADDRESS),
         }
 
     def event_end(self, state: CompoundState, event: dict):

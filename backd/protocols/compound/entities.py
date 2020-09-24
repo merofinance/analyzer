@@ -106,6 +106,14 @@ class CompoundState(State):
                 market.address
             )
 
+            # allow to simulate prices
+            if (
+                constants.PRICE_RATIOS_KEY in self.extra
+                and market.address in self.extra[constants.PRICE_RATIOS_KEY]
+            ):
+                price_ratio = self.extra[constants.PRICE_RATIOS_KEY][market.address]
+                underlying_to_usd = round(price_ratio * underlying_to_usd)
+
             ctoken_to_underlying = (
                 Decimal(round(collateral_factor * exchange_rate)) / EXP_SCALE
             )

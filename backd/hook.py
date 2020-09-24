@@ -1,3 +1,5 @@
+import json
+import re
 from typing import List, Union
 
 from .base_factory import BaseFactory
@@ -36,6 +38,25 @@ class Hook(BaseFactory):
         pass
 
 
+HOOK_REGEXP = re.compile(r"^([a-z0-9_-]+)(?:\((.*?)\))?$")
+
+
+def parse_hook(raw_hook: str) -> Hook:
+    hook_match = HOOK_REGEXP.match(raw_hook)
+    if not hook_match:
+        raise ValueError(f"invalid hook syntax {raw_hook}")
+    hook_name = hook_match.group(1)
+    raw_args = hook_match.group(2)
+
+    def _process_arg(arg: str):
+        return json.loads(arg.strip().replace("'", '"'))
+
+    args = []
+    if raw_args:
+        args = [_process_arg(arg) for arg in raw_args.split(",")]
+    return Hook.get(hook_name)(*args)
+
+
 class Hooks:
     def __init__(self, hooks: List[Union[Hook, str]] = None):
         if hooks is None:
@@ -48,7 +69,7 @@ class Hooks:
 
     def add_hook(self, hook: Union[Hook, str]):
         if isinstance(hook, str):
-            hook = Hook.get(hook)()
+            hook = parse_hook(hook)
         if hook.registered_name in self.hook_names:
             return
         for dependent_hook in hook.list_dependencies():

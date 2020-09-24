@@ -149,19 +149,26 @@ def plot_liquidations_over_time(args: dict):
     liquidation_info = state.extra[LiquidationAmounts.extra_key]
     group_key = liquidation_info.timestamp.dt.floor("d")
 
-    counts = liquidation_info.groupby(group_key).size()
+    liquidation_info["eth_price_usd"] = liquidation_info.eth_price.astype(float) / 1e18
+    eth_price = liquidation_info.groupby(group_key).eth_price_usd.mean()
     amounts = liquidation_info.groupby(group_key).usd_seized.sum() / 1e18
 
     ax = plt.gca()
-    l1 = ax.plot_date(counts.index, counts.values, fmt="--", color=DEFAULT_PALETTE[0])
-    plt.xticks(rotation=45)
-    ax.set_ylabel("Number of liquidations")
-    ax.set_xlabel("Date")
+    l1 = ax.plot_date(amounts.index, amounts.values, fmt="-", color=DEFAULT_PALETTE[1])
+    ax.set_ylabel("Amount liquidated (USD)")
+    ax.yaxis.set_major_formatter(LARGE_MONETARY_FORMATTER)
+    ax.tick_params(axis="x", rotation=45)
+
     ax2 = ax.twinx()
-    l2 = ax2.plot_date(amounts.index, amounts.values, fmt="-", color=DEFAULT_PALETTE[1])
-    ax2.set_ylabel("Amount liquidated (USD)")
-    ax2.yaxis.set_major_formatter(LARGE_MONETARY_FORMATTER)
-    ax.legend(l1 + l2, ["Count", "Amount"], loc="upper left")
+    l2 = ax2.plot_date(
+        eth_price.index, eth_price.values, fmt="--", color=DEFAULT_PALETTE[0]
+    )
+    ax2.set_ylabel("ETH price (USD)")
+    ax2.set_ylim((0, 500))
+
+    ax.set_xlabel("Date")
+    ax.legend(l1 + l2, ["Amount liquidated", "ETH price"], loc="upper left")
+
     plt.tight_layout()
     output_plot(args.get("output"))
 
@@ -220,10 +227,12 @@ def plot_supply_borrow_distribution(args: dict):
 def plot_time_to_liquidation(args: dict):
     state = CompoundState.load(args["state"])
     data = state.extra[LiquidationAmountsWithTime.extra_key]
-    seized_by_ellapsed = data.groupby("block_ellapsed").sum().usd_seized / 1e18
-    cumsum = seized_by_ellapsed.iloc[:15].cumsum()
+    seized_by_ellapsed = data.groupby("block_ellapsed").sum().usd_seized
+    max_blocks = get_option(args, "max_blocks", transform=int, default=15)
+    selected_blocks = seized_by_ellapsed.iloc[:max_blocks]
+    cumsum = selected_blocks.cumsum() / 1e18
 
-    total = data.usd_seized.sum() / 1e18
+    print(f"covered: {selected_blocks.sum() / data.usd_seized.sum()}%")
 
     x = cumsum.index
     heights = cumsum.values
@@ -231,13 +240,12 @@ def plot_time_to_liquidation(args: dict):
     ax1 = plt.gca()
     ax1.set_xticks(x)
     ax1.bar(x, heights, width=1.0, color=COLORS["gray"])
-    ax1.set_xlabel("Number of blocks ellapsed")
+    ax1.set_xlabel("Number of blocks elapsed")
     ax1.set_ylabel("Amount of USD")
     ax1.yaxis.set_major_formatter(LARGE_MONETARY_FORMATTER)
     ax2 = ax1.twinx()
-    ax2.bar(x, heights / total, width=1.0, color=COLORS["gray"])
-    ax2.set_yticks(ax2.get_yticks())
-    ax2.set_yticklabels(["{0}%".format(int(v * 100)) for v in ax2.get_yticks()])
+    ax2.set_yticks(list(range(0, 101, 20)))
+    ax2.set_yticklabels(["{0}%".format(v) for v in ax2.get_yticks()])
     ax2.set_ylabel("Percentage of USD")
 
     plt.tight_layout()
