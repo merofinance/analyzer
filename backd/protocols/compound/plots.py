@@ -156,12 +156,12 @@ def plot_supply_borrow_ratios_over_time(args: dict):
 
     plt.xticks(rotation=45)
     plt.xlabel("Date")
-    plt.ylabel("Collateral in USD")
+    plt.ylabel("Supply in USD")
     # plt.plot_date(x, total_supplies, fmt="-")
     plt.stackplot(x, *ys, labels=labels, colors=DEFAULT_PALETTE)
     ax = plt.gca()
     ax.yaxis.set_major_formatter(LARGE_MONETARY_FORMATTER)
-    plt.legend(title="Supply/borrow ratio", loc="upper left")
+    plt.legend(title="Collateral/borrow ratio", loc="upper left")
     plt.tight_layout()
     output_plot(args.get("output"))
 
@@ -217,22 +217,24 @@ def plot_supply_borrow_distribution(args: dict):
     cum_values = [sum(values[:i]) for i in range(0, len(values) + 1)]
 
     heights = [v / total for v in cum_values]
+    interval = args["interval"]
+
     x = np.arange(len(heights))
+    ticks = np.append(x[::interval][:-1], x[-1])
 
     ax1 = plt.gca()
-    ax1.bar(x, heights, width=1.0, color=COLORS["gray"])
+    ax1.bar(x, heights, width=1.0, color=COLORS["blue"])
 
     ax1.set_yticks(list(ax1.get_yticks())[:-1])
     ax1.set_yticklabels(["{0:,}".format(int(total * v)) for v in ax1.get_yticks()])
     ax1.set_ylabel("Amount of USD")
+    ax1.set_xticks(ticks)
 
     ax1.set_xlabel("Number of users")
     ax1.tick_params(axis="x", rotation=45)
 
-    interval = args["interval"]
-    ticks = np.append(x[::interval][:-1], x[-1])
     ax2 = ax1.twinx()
-    ax2.bar(x, heights, width=1.0, color=COLORS["gray"])
+    ax2.bar(x, heights, width=1.0, color=COLORS["blue"])
 
     ax2.set_yticks(list(ax2.get_yticks())[:-1])  # use FixedLocator
     ax2.set_yticklabels(["{0}%".format(int(v * 100)) for v in ax2.get_yticks()])
