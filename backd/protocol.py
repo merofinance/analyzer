@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterable
+from typing import Iterable, List
 
 from .entities import State
 from .event_processor import Processor
@@ -32,4 +32,8 @@ class Protocol(ABC, BaseFactory):
 
     @abstractmethod
     def get_exporter(self):
+        pass
+
+    @abstractmethod
+    def get_addresses_to_listen(self) -> List[str]:
         pass
