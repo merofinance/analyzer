@@ -10,7 +10,7 @@ import stringcase
 from ...entities import Market
 from ...event_processor import Processor
 from ...hook import Hooks
-from ...logger import logger
+from ...utils.logger import logger
 from . import constants
 from .entities import CDaiMarket
 from .entities import CompoundState as State

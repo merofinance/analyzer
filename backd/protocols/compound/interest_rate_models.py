@@ -3,8 +3,8 @@ from decimal import Decimal
 
 import stringcase
 
-from ...base_factory import BaseFactory
 from ...tokens.dai.dsr import DSR
+from ...utils.base_factory import BaseFactory
 
 EXP_SCALE = 10 ** 18
 

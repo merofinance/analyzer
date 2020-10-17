@@ -4,13 +4,14 @@ from typing import Callable, Iterable
 
 import pymongo
 
-from ... import db, utils
+from ... import db
 from ...entities import PointInTime
 from ...event_processor import Processor
 from ...hook import Hooks
 from ...protocol import Protocol
+from ...utils import streams
 from . import oracles  # pylint: disable=unused-import
-from . import plots, exporter
+from . import exporter, plots
 from .constants import DS_VALUES_MAPPING, DSR_ADDRESS, NULL_ADDRESS
 from .entities import CompoundState
 from .processor import CompoundProcessor
@@ -41,7 +42,7 @@ class CompoundProtocol(Protocol):
         self, min_block: int = None, max_block: int = None
     ) -> Iterable[dict]:
         condition = self.make_block_range_condition(min_block, max_block)
-        return utils.merge_sorted_streams(
+        return streams.merge_sorted_streams(
             db.db.events.find(condition).sort(db.SORT_KEY),
             self.fetch_ds_values(condition),
             self.fetch_chi_values(condition),

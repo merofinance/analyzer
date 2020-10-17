@@ -2,8 +2,7 @@ import os
 import tempfile
 
 import pytest
-
-from backd import caching
+from backd.utils import caching
 
 
 @pytest.fixture
@@ -18,7 +17,7 @@ def dummy_func():
 
 @pytest.fixture
 def temp_dir():
-    directory = tempfile.TemporaryDirectory(prefix="algoforte-")
+    directory = tempfile.TemporaryDirectory(prefix="backd-")
     yield directory
     directory.cleanup()
 

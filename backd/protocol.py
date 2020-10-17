@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Iterable
 
-from .base_factory import BaseFactory
 from .entities import State
 from .event_processor import Processor
 from .hook import Hooks
+from .utils.base_factory import BaseFactory
 
 
 class Protocol(ABC, BaseFactory):

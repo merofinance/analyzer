@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from ...entities import Oracle
-from ...logger import logger
+from ...utils.logger import logger
 from . import constants
 
 MARKETS_BY_CTOKEN = {m["address"]: m for m in constants.MARKETS}

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Dict, Iterator, List, Set, Type, TypeVar
 
-from .base_factory import BaseFactory
+from .utils.base_factory import BaseFactory
 
 
 @dataclass(order=True)

@@ -4,7 +4,7 @@ import pymongo
 from bson.codec_options import CodecOptions
 
 from . import constants, settings
-from .caching import cache
+from .utils.caching import cache
 
 SORT_KEY = [
     ("blockNumber", pymongo.ASCENDING),

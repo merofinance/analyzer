@@ -10,6 +10,7 @@ setup(
         "tqdm",
         "matplotlib",
         "pandas",
+        "python-dotenv",
     ],
     extras_require={
         "dev": [

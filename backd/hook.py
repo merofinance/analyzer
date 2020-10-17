@@ -2,8 +2,8 @@ import json
 import re
 from typing import List, Union
 
-from .base_factory import BaseFactory
 from .entities import State
+from .utils.base_factory import BaseFactory
 
 
 class Hook(BaseFactory):

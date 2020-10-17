@@ -1,17 +1,30 @@
 import asyncio
 import json
-from contextlib import asynccontextmanager
 from typing import Any, List
 
 import websockets
 
-from ..protocols.compound import constants
+from .. import settings
+from ..utils.logger import logger
 
 
 class EventListener:
-    def __init__(self, websocket: websockets.WebSocketClientProtocol):
-        self.websocket = websocket
+    def __init__(self, endpoint: str = settings.INFURA_WS_ENDPOINT):
+        self.endpoint = endpoint
+        self.websocket: websockets.WebSocketClientProtocol = None
+        self._running = False
+
+    async def __aenter__(self):
+        await self.connect()
+        return self
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        self._running = False
+        await self.websocket.close()
+
+    async def connect(self):
         self._running = True
+        self.websocket = await websockets.connect(self.endpoint)
 
     async def _send_request(self, method: str, params: List[Any] = None):
         if params is None:
@@ -36,15 +49,9 @@ class EventListener:
                 yield event
             except asyncio.TimeoutError:
                 continue
+            except websockets.ConnectionClosedError as ex:
+                logger.warning("disconnected: %s, trying to reconnect", ex)
+                await self.connect()
 
     def stop(self):
         self._running = False
-
-    @classmethod
-    @asynccontextmanager
-    async def create(cls, endpoint: str):
-        websocket = await websockets.connect(endpoint)
-        try:
-            yield EventListener(websocket)
-        finally:
-            await websocket.close()

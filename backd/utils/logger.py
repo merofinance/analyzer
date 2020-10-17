@@ -1,10 +1,10 @@
 import logging
 
-from . import constants
+from .. import constants
 
 
 def _create_logger():
-    logger = logging.Logger(constants.TOOL_NAME) # pylint: disable=redefined-outer-name
+    logger = logging.Logger(constants.TOOL_NAME)  # pylint: disable=redefined-outer-name
 
     formatter = logging.Formatter(constants.LOG_FORMAT)
     handler = logging.StreamHandler()

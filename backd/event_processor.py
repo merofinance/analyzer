@@ -3,9 +3,9 @@ from typing import Iterable
 
 from tqdm import tqdm
 
-from . import normalizer
 from .entities import PointInTime, State
 from .hook import Hooks
+from .utils import normalizer
 
 
 class Processor(ABC):

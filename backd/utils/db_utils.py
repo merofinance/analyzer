@@ -2,7 +2,7 @@ from typing import List
 
 import pymongo
 
-from .db import db
+from ..db import db
 
 
 def fetch_user_events(address: str) -> List[dict]:

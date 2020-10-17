@@ -7,9 +7,8 @@ from typing import List
 
 import pymongo
 import stringcase
-
 from backd.db import db
-from backd.logger import logger
+from backd.utils.logger import logger
 
 # use cETH as the default asset for which to get all spirals
 DEFAULT_ASSET = "0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5"

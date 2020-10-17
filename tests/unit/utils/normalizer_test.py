@@ -1,5 +1,4 @@
-from backd import normalizer
-
+from backd.utils import normalizer
 from tests.fixtures import get_event
 
 

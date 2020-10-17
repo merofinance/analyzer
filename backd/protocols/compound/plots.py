@@ -8,7 +8,7 @@ from cycler import cycler
 from matplotlib.ticker import FuncFormatter
 
 from ... import constants, db
-from ...plot_utils import COLORS, DEFAULT_PALETTE
+from ...utils.plot_utils import COLORS, DEFAULT_PALETTE
 from .entities import CompoundState
 from .hooks import (
     Borrowers,
