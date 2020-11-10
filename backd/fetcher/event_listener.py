@@ -3,6 +3,7 @@ import json
 from typing import Any, List
 
 import websockets
+from web3 import Web3, WebsocketProvider
 
 from .. import settings
 from ..utils.logger import logger
@@ -12,6 +13,7 @@ class EventListener:
     def __init__(self, endpoint: str = settings.INFURA_WS_ENDPOINT):
         self.endpoint = endpoint
         self.websocket: websockets.WebSocketClientProtocol = None
+        self.web3 = Web3(WebsocketProvider(endpoint))
         self._running = False
 
     async def __aenter__(self):

@@ -11,6 +11,7 @@ setup(
         "matplotlib",
         "pandas",
         "python-dotenv",
+        "ethereum-tools",
     ],
     extras_require={
         "dev": [
