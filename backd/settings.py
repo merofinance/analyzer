@@ -35,4 +35,4 @@ BACKD_ENV = _get_backd_env()
 
 DATABASE_URL = _get_database_url()
 
-INFURA_WS_ENDPOINT = os.environ.get("INFURA_WS_ENDPOINT")
+INFURA_WS_ENDPOINT = os.environ.get("INFURA_WS_ENDPOINT", "")

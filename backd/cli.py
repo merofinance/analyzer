@@ -1,8 +1,15 @@
 import argparse
+import asyncio
+import json
 import pickle
+from glob import glob
+from os import path
 
-from . import executor
+from web3.main import Web3
+
+from . import executor, settings
 from .db import create_indices
+from .fetcher.event_listener import EventListener
 from .protocol import Protocol
 
 
@@ -162,6 +169,9 @@ add_output_arg(export_borsup_time_parser, required=True)
 export_borsup_time_parser.add_argument("-t", "--threshold", default=10_000, type=int)
 
 
+listen_parser = subparsers.add_parser("listen")
+
+
 def run_create_indices(_args):
     create_indices()
 
@@ -196,6 +206,26 @@ def run_export(args):
     func_name = "export_{0}".format(args["subcommand"].replace("-", "_"))
     func = getattr(exporter, func_name)
     func(args)
+
+
+async def _run_listen(_args):
+    abis_path = path.join(settings.PROJECT_ROOT, "data", "abis")
+    web3 = Web3()
+    contracts = []
+    for abi_path in glob(path.join(abis_path, "*.json")):
+        with open(abi_path) as f:
+            abi = json.load(f)
+        address = web3.toChecksumAddress(path.splitext(path.basename(abi_path))[0])
+        contracts.append(web3.eth.contract(address=address, abi=abi))  # type: ignore
+
+    async with EventListener() as event_listener:
+        await event_listener.listen_contracts_logs(contracts)
+        async for event in event_listener.stream_events():
+            print(event)
+
+
+def run_listen(args):
+    asyncio.run(_run_listen(args))
 
 
 def run():

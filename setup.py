@@ -12,6 +12,7 @@ setup(
         "pandas",
         "python-dotenv",
         "ethereum-tools",
+        "rusty-rlp",
     ],
     extras_require={
         "dev": [
