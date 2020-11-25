@@ -1,17 +1,18 @@
-from os import path
 import json
 from decimal import Decimal as D
+from os import path
 
 import pytest
+from hexbytes import HexBytes
+from web3.datastructures import AttributeDict
 
-from backd import settings
-from backd import constants
+from backd import constants, settings
+from backd.entities import Balances, Market, Markets, Oracle
 from backd.protocols.compound.interest_rate_models import (
     InterestRateModel,
     JumpRateModel,
 )
 from backd.protocols.compound.oracles import UniswapAnchorView
-from backd.entities import Market, Balances, Markets, Oracle
 from backd.tokens.dai.dsr import DSR
 
 MAIN_USER = "0x1234a"
@@ -71,6 +72,32 @@ def dummy_dsr_rates():
         {"blockNumber": 105, "rate": D("1.1") * 10 ** constants.DSR_DECIMALS},
         {"blockNumber": 110, "rate": D("1.5") * 10 ** constants.DSR_DECIMALS},
     ]
+
+
+@pytest.fixture
+def web3_event():
+    return AttributeDict(
+        {
+            "args": AttributeDict(
+                {
+                    "from": "0xD3921fead48A2B58d28c0Ac658D5b53e2AEEC347",
+                    "to": "0x995E9ADA66D5f3fdEaa3Bb9E3a4d81485563Eb81",
+                    "value": 55000000,
+                }
+            ),
+            "event": "Transfer",
+            "logIndex": 116,
+            "transactionIndex": 80,
+            "transactionHash": HexBytes(
+                "0x8a582772dd73ca46eae762091379b69df8908272e58e0b2f7b709820fa971a50"
+            ),
+            "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+            "blockHash": HexBytes(
+                "0x7d66485c9f4178b3a631d56cb2d4cc3ba810c98205a8796db4ec7fe7291ed684"
+            ),
+            "blockNumber": 11329760,
+        }
+    )
 
 
 @pytest.fixture

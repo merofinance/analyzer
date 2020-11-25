@@ -1,0 +1,10 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules"
+testpaths = ["backd", "tests"]
+filterwarnings = ["ignore:::boto"]
+
+[tool.isort]
+src_paths = ["backd", "tests"]
