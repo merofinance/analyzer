@@ -282,3 +282,27 @@ def output_plot(output: str = None):
         plt.show()
     else:
         plt.savefig(output)
+
+
+def plot_top_suppliers_and_borrowers(args: dict):
+    state = CompoundState.load(args["state"])
+    users = state.compute_unique_users()
+
+    borrows = []
+    supplies = []
+    for user in users:
+        total_supplied, total_borrowed = state.compute_user_position(user)
+        supplies.append((user, total_supplied / constants.DEFAULT_DECIMALS))
+        borrows.append((user, total_borrowed / constants.DEFAULT_DECIMALS))
+
+    supplies.sort(key=lambda x: -x[1])
+    borrows.sort(key=lambda x: -x[1])
+
+    def output(accounts):
+        for address, value in accounts:
+            print(address, "&", f"{round(value):,}")
+
+    print("Suppliers")
+    output(supplies[: args.get("n", 10)])
+    print("Borrowers")
+    output(borrows[: args.get("n", 10)])

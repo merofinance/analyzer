@@ -150,6 +150,19 @@ plot_supply_borrow_distribution_parser.add_argument(
     "-m", "--max-blocks", default=17, type=int, help="maximum number of blocks to plot"
 )
 
+plot_top_suppliers_and_borrowers_parser = plot_subparsers.add_parser(
+    "top-suppliers-and-borrowers",
+    help="creates table with top suppliers and borrowers",
+)
+add_state_arg(plot_top_suppliers_and_borrowers_parser)
+plot_top_suppliers_and_borrowers_parser.add_argument(
+    "-n",
+    "--top-n",
+    help="Number of suppliers and borrowers to plot",
+    type=int,
+    default=10,
+)
+
 
 export_parser = subparsers.add_parser("export")
 add_protocol_choice(export_parser)
