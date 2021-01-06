@@ -22,7 +22,7 @@ INT_FORMATTER = FuncFormatter(lambda x, _: "{:,}".format(int(x)))
 LARGE_MONETARY_FORMATTER = FuncFormatter(lambda x, _: "{:,}M".format(x // 1e6))
 
 mpl.rcParams["axes.prop_cycle"] = cycler(color=DEFAULT_PALETTE)
-mpl.rcParams["font.size"] = 12
+mpl.rcParams["font.size"] = 14
 
 
 def plot_suppliers_borrowers_over_time(args: dict):
@@ -220,25 +220,28 @@ def plot_supply_borrow_distribution(args: dict):
     interval = args["interval"]
 
     x = np.arange(len(heights))
-    ticks = np.append(x[::interval][:-1], x[-1])
+    xticks = x[::interval]
+    if x[-1] - xticks[-1] < (xticks[1] - xticks[0]) / 2:
+        xticks = xticks[:-1]
+    ticks = np.append(xticks, x[-1])
 
     ax1 = plt.gca()
-    ax1.bar(x, heights, width=1.0, color=COLORS["blue"])
+    ax1.bar(x, heights, width=1.0, color=COLORS["gray"])
 
     ax1.set_yticks(list(ax1.get_yticks())[:-1])
     ax1.set_yticklabels(["{0:,}".format(int(total * v)) for v in ax1.get_yticks()])
-    ax1.set_ylabel("Amount of USD")
+    ax1.set_ylabel("Cumulative amount of USD")
     ax1.set_xticks(ticks)
 
     ax1.set_xlabel("Number of users")
     ax1.tick_params(axis="x", rotation=45)
 
     ax2 = ax1.twinx()
-    ax2.bar(x, heights, width=1.0, color=COLORS["blue"])
+    ax2.bar(x, heights, width=1.0, color=COLORS["gray"])
 
     ax2.set_yticks(list(ax2.get_yticks())[:-1])  # use FixedLocator
     ax2.set_yticklabels(["{0}%".format(int(v * 100)) for v in ax2.get_yticks()])
-    ax2.set_ylabel("Percentage of USD")
+    ax2.set_ylabel("Cumulative percentage of USD")
 
     ax2.set_xticks(ticks)
     ax2.set_xticklabels(ticks * bucket_size)
