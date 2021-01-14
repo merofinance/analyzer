@@ -94,7 +94,9 @@ class CompoundState(State):
                 positions.append((market, market_user))
         return positions
 
-    def compute_user_position(self, user: str) -> (int, int):
+    def compute_user_position(
+        self, user: str, include_collateral_factor: bool = True
+    ) -> (int, int):
         sum_collateral = 0
         sum_borrows = 0
 
@@ -114,9 +116,10 @@ class CompoundState(State):
                 price_ratio = self.extra[constants.PRICE_RATIOS_KEY][market.address]
                 underlying_to_usd = round(price_ratio * underlying_to_usd)
 
-            ctoken_to_underlying = (
-                Decimal(round(collateral_factor * exchange_rate)) / EXP_SCALE
-            )
+            ctoken_to_underlying = Decimal(exchange_rate / EXP_SCALE)
+            if include_collateral_factor:
+                ctoken_to_underlying *= collateral_factor
+
             ctokens_to_usd = round(ctoken_to_underlying * underlying_to_usd)
             sum_collateral += ctokens_to_usd * user_balances.token_balance // EXP_SCALE
             sum_borrows += (

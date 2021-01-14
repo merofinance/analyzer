@@ -203,7 +203,7 @@ def plot_supply_borrow_distribution(args: dict):
     values = []
     threshold = args["threshold"]
     for user in users:
-        total_supply, total_borrow = state.compute_user_position(user)
+        total_supply, total_borrow = state.compute_user_position(user, False)
         value = total_supply if prop == "supply" else total_borrow
         if value > threshold * 10 ** 18:
             values.append(value / 1e18)
@@ -294,7 +294,7 @@ def plot_top_suppliers_and_borrowers(args: dict):
     borrows = []
     supplies = []
     for user in users:
-        total_supplied, total_borrowed = state.compute_user_position(user)
+        total_supplied, total_borrowed = state.compute_user_position(user, False)
         supplies.append((user, total_supplied / constants.DEFAULT_DECIMALS))
         borrows.append((user, total_borrowed / constants.DEFAULT_DECIMALS))
 
