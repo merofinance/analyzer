@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 from ...entities import Market, MarketUser, State
 from ...tokens.dai.dsr import DSR
@@ -159,8 +159,16 @@ class CompoundState(State):
     def compute_total_supply(self) -> float:
         return sum(self.compute_supply_per_market().values())
 
-    def ctoken_to_usd(self, amount: int, market: Market) -> float:
+    def ctoken_to_usd(self, amount: int, market: Union[Market, str]) -> float:
+        if isinstance(market, str):
+            market = self.markets.find_by_address(market)
         exchange_rate = market.underlying_exchange_rate
         oracle_price = self.oracles.current.get_underlying_price(market.address)
         tokens_to_usd = exchange_rate * oracle_price / EXP_SCALE
         return tokens_to_usd * amount / EXP_SCALE
+
+    def token_to_usd(self, amount: int, market: Union[Market, str]) -> float:
+        if isinstance(market, Market):
+            market = market.address
+        oracle_price = self.oracles.current.get_underlying_price(market)
+        return oracle_price * amount / EXP_SCALE

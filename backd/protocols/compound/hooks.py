@@ -1,9 +1,12 @@
-from collections import OrderedDict
+from __future__ import annotations
+
+from collections import OrderedDict, defaultdict
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Dict, List, Set, Tuple, Union
+from typing import Dict, Set, Tuple, Union
 
 import pandas as pd
+import stringcase
 
 from ...hook import Hook
 from .constants import CETH_ADDRESS, PRICE_RATIOS_KEY
@@ -130,73 +133,109 @@ class SupplyBorrow(Hook):
 
 @Hook.register("leverage-spirals")
 class LeverageSpirals(Hook):
+    HANDLED_EVENTS = {"Borrow", "Mint", "RepayBorrow", "Redeem"}
+
     extra_key = "leverage-spirals"
 
     @dataclass
-    class Spiral:
-        transaction_hash: str
-        start_position: Tuple[int, int]
-        start_market_positions: Dict[str, Dict[str, int]]
-        events: List[dict] = field(default_factory=list)
+    class Balance:
+        borrowed: float = 0
+        minted: float = 0
+        net_borrowed: float = 0
+        # net minted is the amount minted from fresh funds in terms of USD
+        net_minted: float = 0
 
-        end_position: Tuple[int, int] = None
-        end_market_positions: Dict[str, Dict[str, int]] = None
+        @property
+        def minted_recycled(self) -> float:
+            return self.minted - self.net_minted
+
+    @dataclass
+    class UserStats:
+        @staticmethod
+        def create_balance():
+            return LeverageSpirals.Balance()
+
+        current_balance: LeverageSpirals.Balance = field(
+            default_factory=create_balance.__func__
+        )
+        max_balance: LeverageSpirals.Balance = field(
+            default_factory=create_balance.__func__
+        )
+
+        def update_max(self):
+            if self.current_balance.minted_recycled > self.max_balance.minted_recycled:
+                self.current_balance = self.max_balance
 
     def __init__(self):
-        # block -> user -> spiral
-        self.all_spirals: Dict[int, Dict[str, LeverageSpirals.Spiral]] = OrderedDict()
-        self.current_tx_spirals: Dict[str, LeverageSpirals.Spiral] = {}
+        # user -> spiral
+        self.users_stats: Dict[str, LeverageSpirals.UserStats] = defaultdict(
+            LeverageSpirals.UserStats
+        )
 
     def global_start(self, state: CompoundState):
         if self.extra_key not in state.extra:
-            state.extra[self.extra_key] = self.all_spirals
-
-    def block_start(self, state: CompoundState, block_number: int):
-        self.all_spirals[block_number] = {}
-
-    def transaction_start(
-        self, state: CompoundState, block_number: int, transaction_index: int
-    ):
-        self.current_tx_spirals = {}
-
-    def transaction_end(
-        self, state: CompoundState, block_number: int, transaction_index: int
-    ):
-        for user, spiral in self.current_tx_spirals.items():
-            if self._is_spiral(spiral):
-                spiral.end_position = state.compute_user_position(user)
-                spiral.end_market_positions = state.get_user_positions(user)
-                self.all_spirals[block_number][user] = spiral
-
-    def _is_spiral(self, spiral: dict):
-        borrow_events = (1 for k in spiral.events if k["event"] == "Borrow")
-        if sum(borrow_events) <= 1:
-            return False
-
-        mint_events = (1 for k in spiral.events if k["event"] == "Mint")
-        if sum(mint_events) <= 1:
-            return False
-        return True
-
-    def _initialize_user(self, user: str, event: dict, state: CompoundState):
-        spiral = self.__class__.Spiral(
-            transaction_hash=event["transactionHash"],
-            start_position=state.compute_user_position(user),
-            start_market_positions=state.get_user_positions(user),
-        )
-        self.current_tx_spirals[user] = spiral
+            state.extra[self.extra_key] = self.users_stats
 
     def event_start(self, state: CompoundState, event: dict):
-        if event["event"] not in ["Borrow", "Mint"]:
+        if event["event"] not in self.HANDLED_EVENTS:
             return
-        user = self._get_user(event)
-        if user not in self.current_tx_spirals:
-            self._initialize_user(user, event, state)
-        self.current_tx_spirals[user].events.append(event)
+        normalized_event = stringcase.snakecase(event["event"])
+        getattr(self, f"_handle_{normalized_event}")(state, event)
 
-    def _get_user(self, event: dict):
-        key = {"Borrow": "borrower", "Mint": "minter"}[event["event"]]
-        return event["returnValues"][key]
+    def _handle_mint(self, state: CompoundState, event: dict):
+        user_stats = self._get_user_stats("minter", event)
+        usd_amount = self._get_usd_amount("mintAmount", state, event)
+
+        user_stats.current_balance.minted += usd_amount
+        user_stats.current_balance.net_minted += max(
+            0, usd_amount - user_stats.current_balance.net_borrowed
+        )
+        user_stats.current_balance.net_borrowed -= min(
+            user_stats.current_balance.net_borrowed, usd_amount
+        )
+
+        user_stats.update_max()
+
+    def _handle_borrow(self, state: CompoundState, event: dict):
+        user_stats = self._get_user_stats("borrower", event)
+        usd_amount = self._get_usd_amount("borrowAmount", state, event)
+        user_stats.current_balance.borrowed += usd_amount
+        user_stats.current_balance.net_borrowed += usd_amount
+
+        user_stats.update_max()
+
+    def _handle_repay_borrow(self, state: CompoundState, event: dict):
+        user_stats = self._get_user_stats("borrower", event)
+        usd_amount = self._get_usd_amount("repayAmount", state, event)
+        user_stats.current_balance.borrowed -= min(
+            user_stats.current_balance.borrowed, usd_amount
+        )
+        user_stats.current_balance.net_borrowed -= min(
+            user_stats.current_balance.net_borrowed, usd_amount
+        )
+
+        user_stats.update_max()
+
+    def _handle_redeem(self, state: CompoundState, event: dict):
+        user_stats = self._get_user_stats("redeemer", event)
+        usd_amount = self._get_usd_amount("redeemAmount", state, event)
+
+        user_stats.current_balance.minted -= min(
+            user_stats.current_balance.minted, usd_amount
+        )
+        user_stats.current_balance.net_minted -= min(
+            user_stats.current_balance.net_minted, usd_amount
+        )
+
+        user_stats.update_max()
+
+    def _get_user_stats(self, key: str, event: dict):
+        user = event["returnValues"][key]
+        return self.users_stats[user]
+
+    def _get_usd_amount(self, key: str, state: CompoundState, event: dict):
+        amount = int(event["returnValues"][key])
+        return state.token_to_usd(amount, event["address"])
 
 
 @Hook.register("users-borrow-supply")
