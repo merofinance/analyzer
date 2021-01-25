@@ -45,14 +45,14 @@ def plot_suppliers_borrowers_over_time(args: dict):
     borrowers = get_users(state.extra[Borrowers.extra_key].historical_count)
     interval = args["interval"]
 
-    x1, y1 = get_xy(suppliers, interval)
-    x2, y2 = get_xy(borrowers, interval)
+    x1, y1 = get_xy(borrowers, interval)
+    x2, y2 = get_xy(suppliers, interval)
 
     plt.xticks(rotation=45)
     plt.xlabel("Date")
     plt.ylabel("Number of accounts")
-    plt.plot(x1, y1, "-", label="Suppliers")
-    plt.plot(x2, y2, "-", label="Borrowers")
+    plt.plot(x1, y1, "-", label="Borrowers")
+    plt.plot(x2, y2, "-", label="Suppliers")
     ax = plt.gca()
     ax.yaxis.set_major_formatter(INT_FORMATTER)
     plt.tight_layout()
